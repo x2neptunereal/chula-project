@@ -22,6 +22,17 @@ import { Separator } from "@/components/ui/separator";
 import { parseSlipText, type ParsedSlip, type BankType } from "@/lib/slip-parser";
 import { DatePicker } from "@/components/ui/date-picker";
 
+// ─── Timezone helper ──────────────────────────────────────────────────────────
+// new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
+// in browsers, causing a +7h shift. Using Date(y,m,d,h,min) always gives local
+// time, then .toISOString() sends a proper UTC timestamp to the server.
+function localToISO(dateStr: string): string {
+  const [datePart, timePart = "00:00"] = dateStr.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = (timePart || "00:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min).toISOString();
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BANK_LABELS: Record<BankType, string> = {
   krungthai: "Krungthai",
@@ -144,7 +155,7 @@ export default function ExpensesPage() {
         body: JSON.stringify({
           type: "expense",
           amount: parsed,
-          date: manualDate || new Date().toISOString(),
+          date: localToISO(manualDate || format(new Date(), "yyyy-MM-dd HH:mm")),
           description: manualDesc.trim() || "Expense",
         }),
       });
@@ -290,7 +301,7 @@ export default function ExpensesPage() {
             transactionNumber: slip.transactionNumber || `manual-${Date.now()}`,
             bank: slip.bank,
             amount,
-            date: slip.date,
+            date: localToISO(slip.date),
             description: slip.description || `Slip (${BANK_LABELS[slip.bank]})`,
           }),
         });

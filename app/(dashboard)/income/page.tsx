@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+
+function localToISO(dateStr: string): string {
+  const [datePart, timePart = "00:00"] = dateStr.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = (timePart || "00:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min).toISOString();
+}
 import { IconPlus, IconLoader2, IconCheck, IconTrendingUp } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,7 +40,7 @@ export default function IncomePage() {
         body: JSON.stringify({
           type: "income",
           amount: parsed,
-          date: date || new Date().toISOString(),
+          date: localToISO(date || format(new Date(), "yyyy-MM-dd HH:mm")),
           description: description.trim() || "Income",
         }),
       });
