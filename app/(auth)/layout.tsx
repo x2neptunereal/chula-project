@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
 import { Particles } from "@/components/ui/particles";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -29,7 +30,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         color={particleColor}
       />
 
-      <div className="z-10 absolute top-4 right-4">
+      <div className="z-10 absolute top-4 right-4 flex items-center gap-1">
+        <LanguageToggle />
         <ThemeToggle />
       </div>
       <div className="relative z-10 w-full flex items-center justify-center">

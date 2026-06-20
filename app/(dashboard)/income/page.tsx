@@ -16,8 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useLanguage } from "@/lib/i18n";
 
 export default function IncomePage() {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm"));
   const [description, setDescription] = useState("");
@@ -28,7 +30,7 @@ export default function IncomePage() {
     e.preventDefault();
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error(t("valid_amount"));
       return;
     }
 
@@ -41,20 +43,20 @@ export default function IncomePage() {
           type: "income",
           amount: parsed,
           date: localToISO(date || format(new Date(), "yyyy-MM-dd HH:mm")),
-          description: description.trim() || "Income",
+          description: description.trim() || t("income"),
         }),
       });
 
       if (!res.ok) throw new Error();
 
-      toast.success("Income recorded successfully");
+      toast.success(t("income_recorded"));
       setSaved(true);
       setAmount("");
       setDate(format(new Date(), "yyyy-MM-dd"));
       setDescription("");
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      toast.error("Failed to save income");
+      toast.error(t("income_save_failed"));
     } finally {
       setLoading(false);
     }
@@ -63,8 +65,8 @@ export default function IncomePage() {
   return (
     <div className="flex flex-col gap-6 max-w-lg mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Record Income</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Add income to your account</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("record_income")}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("record_income_subtitle")}</p>
       </div>
 
       <Card>
@@ -74,8 +76,8 @@ export default function IncomePage() {
               <IconTrendingUp className="size-5" />
             </div>
             <div>
-              <CardTitle className="text-base">New Income Entry</CardTitle>
-              <CardDescription>Fill in the details below</CardDescription>
+              <CardTitle className="text-base">{t("new_income_entry")}</CardTitle>
+              <CardDescription>{t("fill_details_below")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -84,7 +86,7 @@ export default function IncomePage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="amount">
-                Income Amount (THB) <span className="text-destructive">*</span>
+                {t("income_amount")} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -105,15 +107,15 @@ export default function IncomePage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">{t("date")}</Label>
               <DatePicker value={date} onChange={setDate} showTime />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="description">Description (optional)</Label>
+              <Label htmlFor="description">{t("description_optional")}</Label>
               <Input
                 id="description"
-                placeholder="e.g. Monthly salary, Freelance payment…"
+                placeholder={t("eg_salary")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -131,7 +133,7 @@ export default function IncomePage() {
               ) : (
                 <IconPlus className="size-4" />
               )}
-              {saved ? "Saved!" : "Confirm & Save"}
+              {saved ? t("saved") : t("confirm_save")}
             </Button>
           </form>
         </CardContent>

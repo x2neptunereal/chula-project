@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useLanguage } from "@/lib/i18n";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ email: "", username: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,11 +26,11 @@ export default function SignupPage() {
     setError("");
 
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwords_no_match"));
       return;
     }
     if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("password_too_short"));
       return;
     }
 
@@ -47,14 +49,14 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
+        setError(data.error ?? t("something_went_wrong"));
         return;
       }
 
       router.push("/overview");
       router.refresh();
     } catch {
-      setError("Unable to connect. Please try again.");
+      setError(t("unable_to_connect"));
     } finally {
       setLoading(false);
     }
@@ -68,8 +70,8 @@ export default function SignupPage() {
             <IconMathAvg stroke={2} className="size-5" />
           </div>
         </div>
-        <CardTitle className="text-xl">Create an account</CardTitle>
-        <CardDescription>Start tracking your entropy today</CardDescription>
+        <CardTitle className="text-xl">{t("create_account_title")}</CardTitle>
+        <CardDescription>{t("create_account_subtitle")}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -81,7 +83,7 @@ export default function SignupPage() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -95,7 +97,7 @@ export default function SignupPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t("username")}</Label>
             <Input
               id="username"
               name="username"
@@ -109,7 +111,7 @@ export default function SignupPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               name="password"
@@ -123,7 +125,7 @@ export default function SignupPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Label htmlFor="confirmPassword">{t("confirm_password")}</Label>
             <Input
               id="confirmPassword"
               name="confirmPassword"
@@ -138,14 +140,14 @@ export default function SignupPage() {
 
           <Button type="submit" className="w-full mt-2" disabled={loading}>
             {loading && <IconLoader2 className="size-4 animate-spin" />}
-            Create account
+            {t("create_account")}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t("already_have_account")}{" "}
           <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign in
+            {t("sign_in")}
           </Link>
         </p>
       </CardContent>

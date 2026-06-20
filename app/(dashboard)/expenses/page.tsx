@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { parseSlipText, type ParsedSlip, type BankType } from "@/lib/slip-parser";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useLanguage } from "@/lib/i18n";
 
 // ─── Timezone helper ──────────────────────────────────────────────────────────
 // new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
@@ -127,6 +128,7 @@ async function runOCR(canvas: HTMLCanvasElement): Promise<string> {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function ExpensesPage() {
+  const { t } = useLanguage();
   // Manual entry
   const [manualAmount, setManualAmount] = useState("");
   const [manualDate, setManualDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm"));
@@ -144,7 +146,7 @@ export default function ExpensesPage() {
     e.preventDefault();
     const parsed = parseFloat(manualAmount);
     if (!parsed || parsed <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error(t("valid_amount"));
       return;
     }
     setManualLoading(true);
@@ -156,18 +158,18 @@ export default function ExpensesPage() {
           type: "expense",
           amount: parsed,
           date: localToISO(manualDate || format(new Date(), "yyyy-MM-dd HH:mm")),
-          description: manualDesc.trim() || "Expense",
+          description: manualDesc.trim() || t("expense"),
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Expense recorded");
+      toast.success(t("expense_recorded"));
       setManualSaved(true);
       setManualAmount("");
       setManualDate(format(new Date(), "yyyy-MM-dd"));
       setManualDesc("");
       setTimeout(() => setManualSaved(false), 2000);
     } catch {
-      toast.error("Failed to save expense");
+      toast.error(t("expense_save_failed"));
     } finally {
       setManualLoading(false);
     }
@@ -176,7 +178,7 @@ export default function ExpensesPage() {
   // ── Slip file handling ─────────────────────────────────────────────────────
   function addFiles(files: FileList | File[]) {
     const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (!arr.length) { toast.error("Please upload image files only"); return; }
+    if (!arr.length) { toast.error(t("upload_images_only")); return; }
 
     const newEntries: SlipEntry[] = arr.map((file) => ({
       id: `${Date.now()}-${Math.random()}`,
@@ -247,7 +249,7 @@ export default function ExpensesPage() {
             parsed,
             rawText: text,
             transactionNumber: parsed.transactionNumber ?? "",
-            errorMsg: "This slip has already been recorded.",
+            errorMsg: t("slip_duplicate_msg"),
           });
           return;
         }
@@ -262,7 +264,7 @@ export default function ExpensesPage() {
         // Use full date+time from OCR; fall back to current datetime only if nothing was parsed
         date: format(parsed.date ?? new Date(), "yyyy-MM-dd HH:mm"),
         bank: parsed.bank,
-        description: `Slip (${BANK_LABELS[parsed.bank]})`,
+        description: `${t("slip")} (${BANK_LABELS[parsed.bank]})`,
       });
     } catch (err) {
       updateSlip(slip.id, {
@@ -274,23 +276,23 @@ export default function ExpensesPage() {
 
   async function scanAll() {
     const pending = slips.filter((s) => s.status === "pending");
-    if (!pending.length) { toast.info("No slips to scan"); return; }
+    if (!pending.length) { toast.info(t("no_slips_to_scan")); return; }
     for (const slip of pending) {
       await scanSlip(slip);
     }
-    toast.success(`Scanned ${pending.length} slip(s)`);
+    toast.success(`${t("scanned_slips")} ${pending.length} ${t("slip_s")}`);
   }
 
   // ── Save confirmed slips ───────────────────────────────────────────────────
   async function saveSlips() {
     const ready = slips.filter((s) => s.status === "done");
-    if (!ready.length) { toast.info("No confirmed slips to save"); return; }
+    if (!ready.length) { toast.info(t("no_confirmed_slips")); return; }
 
     let saved = 0;
     for (const slip of ready) {
       const amount = parseFloat(slip.amount);
       if (!amount || amount <= 0) {
-        toast.error(`Invalid amount for slip ${slip.transactionNumber || slip.file.name}`);
+        toast.error(`${t("invalid_amount_for_slip")} ${slip.transactionNumber || slip.file.name}`);
         continue;
       }
       try {
@@ -302,7 +304,7 @@ export default function ExpensesPage() {
             bank: slip.bank,
             amount,
             date: localToISO(slip.date),
-            description: slip.description || `Slip (${BANK_LABELS[slip.bank]})`,
+            description: slip.description || `${t("slip")} (${BANK_LABELS[slip.bank]})`,
           }),
         });
         if (res.ok) {
@@ -310,14 +312,14 @@ export default function ExpensesPage() {
           removeSlip(slip.id);
         } else {
           const d = await res.json();
-          toast.error(d.error ?? "Failed to save slip");
+          toast.error(d.error ?? t("slip_save_failed"));
         }
       } catch {
-        toast.error("Network error saving slip");
+        toast.error(t("network_error_slip"));
       }
     }
 
-    if (saved > 0) toast.success(`${saved} expense(s) saved from slips`);
+    if (saved > 0) toast.success(`${saved} ${t("saved_from_slips")}`);
   }
 
   const pendingCount = slips.filter((s) => s.status === "pending").length;
@@ -326,8 +328,8 @@ export default function ExpensesPage() {
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Record Expenses</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Enter manually or upload bank slips</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("record_expenses")}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("record_expenses_subtitle")}</p>
       </div>
 
       {/* ── Manual entry ──────────────────────────────────────────────────── */}
@@ -338,8 +340,8 @@ export default function ExpensesPage() {
               <IconMinus className="size-5" />
             </div>
             <div>
-              <CardTitle className="text-base">Manual Entry</CardTitle>
-              <CardDescription>Enter expense details directly</CardDescription>
+              <CardTitle className="text-base">{t("manual_entry")}</CardTitle>
+              <CardDescription>{t("manual_entry_subtitle")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -348,7 +350,7 @@ export default function ExpensesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="m-amount">
-                  Amount (THB) <span className="text-destructive">*</span>
+                  {t("amount_thb")} <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">฿</span>
@@ -366,7 +368,7 @@ export default function ExpensesPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="m-date">Date</Label>
+                <Label htmlFor="m-date">{t("date")}</Label>
                 <DatePicker
                   value={manualDate}
                   onChange={setManualDate}
@@ -375,10 +377,10 @@ export default function ExpensesPage() {
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="m-desc">Description (optional)</Label>
+              <Label htmlFor="m-desc">{t("description_optional")}</Label>
               <Input
                 id="m-desc"
-                placeholder="e.g. Grocery shopping, Electricity bill…"
+                placeholder={t("eg_grocery_bill")}
                 value={manualDesc}
                 onChange={(e) => setManualDesc(e.target.value)}
               />
@@ -395,7 +397,7 @@ export default function ExpensesPage() {
               ) : (
                 <IconPlus className="size-4" />
               )}
-              {manualSaved ? "Saved!" : "Confirm & Save"}
+              {manualSaved ? t("saved") : t("confirm_save")}
             </Button>
           </form>
         </CardContent>
@@ -411,9 +413,9 @@ export default function ExpensesPage() {
               <IconScan className="size-5" />
             </div>
             <div>
-              <CardTitle className="text-base">Upload Bank Slips</CardTitle>
+              <CardTitle className="text-base">{t("upload_slips")}</CardTitle>
               <CardDescription>
-                Supports Krungthai, TrueMoney, and K-Bank. Duplicate slips are automatically detected.
+                {t("upload_slips_subtitle")}
               </CardDescription>
             </div>
           </div>
@@ -436,8 +438,8 @@ export default function ExpensesPage() {
               <IconUpload className="size-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium">Drop slip images here or click to browse</p>
-              <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WEBP — multiple files supported</p>
+              <p className="text-sm font-medium">{t("drop_slips")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("drop_slips_formats")}</p>
             </div>
             <input
               ref={fileInputRef}
@@ -453,18 +455,18 @@ export default function ExpensesPage() {
           {slips.length > 0 && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{slips.length} slip(s) loaded</span>
+                <span className="text-sm font-medium">{slips.length} {t("slips_loaded")}</span>
                 <div className="flex gap-2">
                   {pendingCount > 0 && (
                     <Button size="sm" variant="outline" onClick={scanAll} className="gap-1.5 text-xs">
                       <IconScan className="size-3.5" />
-                      Scan {pendingCount} slip(s)
+                      {t("scan_slips")} {pendingCount} {t("slip_s")}
                     </Button>
                   )}
                   {doneCount > 0 && (
                     <Button size="sm" onClick={saveSlips} className="gap-1.5 text-xs">
                       <IconCheck className="size-3.5" />
-                      Confirm {doneCount} expense(s)
+                      {t("confirm_expenses")} {doneCount} {t("expense_s")}
                     </Button>
                   )}
                 </div>
@@ -499,6 +501,7 @@ function SlipCard({
   onScan: () => void;
   onUpdate: (patch: Partial<SlipEntry>) => void;
 }) {
+  const { t } = useLanguage();
   const [showRaw, setShowRaw] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const statusColors: Record<SlipEntry["status"], string> = {
@@ -509,11 +512,11 @@ function SlipCard({
     error: "bg-rose-100 text-rose-700",
   };
   const statusLabels: Record<SlipEntry["status"], string> = {
-    pending: "Pending scan",
-    scanning: "Scanning…",
-    done: "Ready",
-    duplicate: "Duplicate",
-    error: "Error",
+    pending: t("pending_scan"),
+    scanning: t("scanning"),
+    done: t("ready"),
+    duplicate: t("duplicate"),
+    error: t("error"),
   };
 
   return (
@@ -556,12 +559,12 @@ function SlipCard({
           </span>
           {slip.status === "pending" && (
             <Button size="xs" variant="outline" onClick={onScan} className="w-fit gap-1 mt-1 text-xs">
-              <IconScan className="size-3" /> Scan
+              <IconScan className="size-3" /> {t("scan_slips")}
             </Button>
           )}
           {slip.status === "scanning" && (
             <div className="flex items-center gap-1.5 text-xs text-amber-600 mt-1">
-              <IconLoader2 className="size-3 animate-spin" /> Running OCR…
+              <IconLoader2 className="size-3 animate-spin" /> {t("scanning")}
             </div>
           )}
         </div>
@@ -598,7 +601,7 @@ function SlipCard({
                 onScan(); // re-scan now that the record is cleared
               }}
             >
-              Clear &amp; retry
+              {t("clear_retry")}
             </button>
           )}
         </div>
@@ -608,7 +611,7 @@ function SlipCard({
       {slip.status === "done" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Transaction No.</Label>
+            <Label className="text-xs">{t("transaction_no")}</Label>
             <Input
               className="h-7 text-xs"
               value={slip.transactionNumber}
@@ -617,7 +620,7 @@ function SlipCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Bank</Label>
+            <Label className="text-xs">{t("bank")}</Label>
             <Input
               className="h-7 text-xs"
               value={BANK_LABELS[slip.bank]}
@@ -625,7 +628,7 @@ function SlipCard({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Amount (THB) *</Label>
+            <Label className="text-xs">{t("amount_thb")} *</Label>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">฿</span>
               <Input
@@ -640,7 +643,7 @@ function SlipCard({
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Date</Label>
+            <Label className="text-xs">{t("date")}</Label>
             <DatePicker
               value={slip.date}
               onChange={(v) => onUpdate({ date: v })}
@@ -649,12 +652,12 @@ function SlipCard({
             />
           </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
-            <Label className="text-xs">Description</Label>
+            <Label className="text-xs">{t("description")}</Label>
             <Input
               className="h-7 text-xs"
               value={slip.description}
               onChange={(e) => onUpdate({ description: e.target.value })}
-              placeholder="e.g. Payment for groceries"
+              placeholder={t("eg_payment_groceries")}
             />
           </div>
 
@@ -666,7 +669,7 @@ function SlipCard({
                 onClick={() => setShowRaw((v) => !v)}
                 className="text-xs text-muted-foreground hover:text-foreground text-left underline underline-offset-2 w-fit"
               >
-                {showRaw ? "Hide" : "Show"} raw OCR text
+                {showRaw ? t("hide_raw_ocr") : t("show_raw_ocr")}
               </button>
               {showRaw && (
                 <textarea

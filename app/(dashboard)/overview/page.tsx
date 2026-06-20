@@ -32,6 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useLanguage } from "@/lib/i18n";
 
 interface Transaction {
   _id: string;
@@ -51,12 +52,14 @@ function SummaryCard({
   icon: Icon,
   colorClass,
   loading,
+  isBalance,
 }: {
   title: string;
   amount: number;
   icon: React.ElementType;
   colorClass: string;
   loading: boolean;
+  isBalance?: boolean;
 }) {
   return (
     <Card>
@@ -74,7 +77,7 @@ function SummaryCard({
         ) : (
           <span
             className={`text-2xl font-bold tracking-tight ${
-              title === "Balance" && amount < 0 ? "text-rose-600 dark:text-rose-400" : ""
+              isBalance && amount < 0 ? "text-rose-600 dark:text-rose-400" : ""
             }`}
           >
             {formatCurrency(amount)}
@@ -86,6 +89,7 @@ function SummaryCard({
 }
 
 export default function OverviewPage() {
+  const { t } = useLanguage();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
@@ -110,7 +114,7 @@ export default function OverviewPage() {
       const data = await res.json();
       setTransactions(data.transactions ?? []);
     } catch {
-      toast.error("Failed to load transactions");
+      toast.error(t("tx_load_failed"));
     } finally {
       setLoading(false);
     }
@@ -161,10 +165,10 @@ export default function OverviewPage() {
     try {
       const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Transaction deleted");
+      toast.success(t("tx_deleted"));
       fetchTransactions();
     } catch {
-      toast.error("Failed to delete transaction");
+      toast.error(t("tx_delete_failed"));
     }
   }
 
@@ -194,11 +198,11 @@ export default function OverviewPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Transaction updated");
+      toast.success(t("tx_updated"));
       setEditTx(null);
       fetchTransactions();
     } catch {
-      toast.error("Failed to update transaction");
+      toast.error(t("tx_update_failed"));
     } finally {
       setEditLoading(false);
     }
@@ -214,32 +218,33 @@ export default function OverviewPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Your financial summary</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("overview_title")}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("overview_subtitle")}</p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
-          title="Total Income"
+          title={t("total_income")}
           amount={allTotals.income}
           icon={IconTrendingUp}
           colorClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
           loading={loading}
         />
         <SummaryCard
-          title="Total Expenses"
+          title={t("total_expenses")}
           amount={allTotals.expenses}
           icon={IconTrendingDown}
           colorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
           loading={loading}
         />
         <SummaryCard
-          title="Balance"
+          title={t("balance")}
           amount={allTotals.income - allTotals.expenses}
           icon={IconMathAvg}
           colorClass="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
           loading={loading}
+          isBalance
         />
       </div>
 
@@ -249,10 +254,10 @@ export default function OverviewPage() {
           <div className="flex flex-col gap-3">
             {/* Title row */}
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Transactions</CardTitle>
+              <CardTitle className="text-base">{t("transactions")}</CardTitle>
               {hasFilter && (
                 <Button variant="ghost" size="xs" onClick={clearFilters} className="gap-1 text-xs">
-                  <IconX className="size-3" /> Clear
+                  <IconX className="size-3" /> {t("clear")}
                 </Button>
               )}
             </div>
@@ -263,7 +268,7 @@ export default function OverviewPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
+                placeholder={t("search_placeholder")}
                 className="pl-8 w-full"
               />
             </div>
@@ -273,17 +278,17 @@ export default function OverviewPage() {
               <div className="col-span-2 sm:col-span-1">
                 <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All types" />
+                    <SelectValue placeholder={t("all_types")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    <SelectItem value="income">Income only</SelectItem>
-                    <SelectItem value="expense">Expenses only</SelectItem>
+                    <SelectItem value="all">{t("all_types")}</SelectItem>
+                    <SelectItem value="income">{t("income_only")}</SelectItem>
+                    <SelectItem value="expense">{t("expenses_only")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <DatePicker value={dateFrom} onChange={setDateFrom} className="w-full" placeholder="Start date" />
-              <DatePicker value={dateTo} onChange={setDateTo} className="w-full" placeholder="End date" />
+              <DatePicker value={dateFrom} onChange={setDateFrom} className="w-full" placeholder={t("start_date")} />
+              <DatePicker value={dateTo} onChange={setDateTo} className="w-full" placeholder={t("end_date")} />
             </div>
           </div>
         </CardHeader>
@@ -299,7 +304,7 @@ export default function OverviewPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <IconMathAvg stroke={2} className="size-10 text-muted-foreground/40 mb-3" />
               <p className="text-sm text-muted-foreground">
-                {hasFilter ? "No transactions match your filters" : "No transactions yet"}
+                {hasFilter ? t("no_match_filters") : t("no_transactions_yet")}
               </p>
             </div>
           ) : (
@@ -326,7 +331,7 @@ export default function OverviewPage() {
                     {/* Row 1: description + amount */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium truncate">
-                        {tx.description || (tx.type === "income" ? "Income" : "Expense")}
+                        {tx.description || (tx.type === "income" ? t("income") : t("expense"))}
                       </span>
                       <span className={`text-sm font-semibold shrink-0 ${
                         tx.type === "income"
@@ -364,11 +369,11 @@ export default function OverviewPage() {
       <Dialog open={!!editTx} onOpenChange={(open) => !open && setEditTx(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit transaction</DialogTitle>
+            <DialogTitle>{t("edit_transaction")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEdit} className="flex flex-col gap-4 pt-2">
             <div className="flex flex-col gap-1.5">
-              <Label>Type</Label>
+              <Label>{t("type")}</Label>
               <Select
                 value={editForm.type}
                 onValueChange={(v) => setEditForm((p) => ({ ...p, type: v }))}
@@ -377,14 +382,14 @@ export default function OverviewPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="income">{t("income")}</SelectItem>
+                  <SelectItem value="expense">{t("expense")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-amount">Amount (THB)</Label>
+              <Label htmlFor="edit-amount">{t("amount_thb")}</Label>
               <Input
                 id="edit-amount"
                 type="number"
@@ -397,7 +402,7 @@ export default function OverviewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-date">Date</Label>
+              <Label htmlFor="edit-date">{t("date")}</Label>
               <DatePicker
                 value={editForm.date}
                 onChange={(v) => setEditForm((p) => ({ ...p, date: v }))}
@@ -406,23 +411,23 @@ export default function OverviewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-desc">Description (optional)</Label>
+              <Label htmlFor="edit-desc">{t("description_optional")}</Label>
               <Input
                 id="edit-desc"
                 value={editForm.description}
                 onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="e.g. Grocery shopping"
+                placeholder={t("eg_grocery")}
               />
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTx(null)}>
-                Cancel
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={editLoading}>
                 {editLoading && <IconLoader2 className="size-4 animate-spin" />}
                 <IconCheck className="size-4" />
-                Save changes
+                {t("save_changes")}
               </Button>
             </DialogFooter>
           </form>

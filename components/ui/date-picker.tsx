@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useLanguage } from "@/lib/i18n";
 
 interface DatePickerProps {
   /**
@@ -28,13 +29,15 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   className,
   size = "default",
   disabled,
   showTime = false,
 }: DatePickerProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = React.useState(false);
+  const resolvedPlaceholder = placeholder ?? t("pick_a_date");
 
   // ── Parse incoming value ────────────────────────────────────────────────────
   const { datePart, timePart } = React.useMemo(() => {
@@ -112,7 +115,7 @@ export function DatePicker({
           )}
         >
           <IconCalendar className={cn("shrink-0 text-muted-foreground", size === "sm" ? "size-3" : "size-4")} />
-          {label ?? placeholder}
+          {label ?? resolvedPlaceholder}
         </button>
       </PopoverTrigger>
 
@@ -179,7 +182,7 @@ export function DatePicker({
               className="ml-auto"
               onClick={() => setOpen(false)}
             >
-              Done
+              {t("done")}
             </Button>
           </div>
         )}

@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useLanguage } from "@/lib/i18n";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,14 +33,14 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
+        setError(data.error ?? t("something_went_wrong"));
         return;
       }
 
       router.push("/overview");
       router.refresh();
     } catch {
-      setError("Unable to connect. Please try again.");
+      setError(t("unable_to_connect"));
     } finally {
       setLoading(false);
     }
@@ -52,8 +54,8 @@ export default function LoginPage() {
             <IconMathAvg stroke={2} className="size-5" />
           </div>
         </div>
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your ZeroEntropy account</CardDescription>
+        <CardTitle className="text-xl">{t("welcome_back")}</CardTitle>
+        <CardDescription>{t("signin_subtitle")}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -65,7 +67,7 @@ export default function LoginPage() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
@@ -78,7 +80,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
@@ -92,14 +94,14 @@ export default function LoginPage() {
 
           <Button type="submit" className="w-full mt-2" disabled={loading}>
             {loading && <IconLoader2 className="size-4 animate-spin" />}
-            Sign in
+            {t("sign_in")}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          {t("no_account")}{" "}
           <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign up
+            {t("sign_up")}
           </Link>
         </p>
       </CardContent>

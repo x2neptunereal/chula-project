@@ -19,6 +19,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,13 +37,14 @@ interface User {
 }
 
 const navItems = [
-  { href: "/overview", label: "Overview", icon: IconLayoutDashboard },
-  { href: "/expenses", label: "Expenses", icon: IconMinus },
-  { href: "/income", label: "Income", icon: IconPlus },
+  { href: "/overview", labelKey: "nav_overview" as const, icon: IconLayoutDashboard },
+  { href: "/expenses", labelKey: "nav_expenses" as const, icon: IconMinus },
+  { href: "/income", labelKey: "nav_income" as const, icon: IconPlus },
 ];
 
 function NavContent({ user }: { user: User | null }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <div className="flex h-full flex-col">
@@ -57,7 +60,7 @@ function NavContent({ user }: { user: User | null }) {
 
       {/* Nav links */}
       <nav className="flex flex-col gap-1 p-2 flex-1 mt-2">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
@@ -71,7 +74,7 @@ function NavContent({ user }: { user: User | null }) {
               )}
             >
               <Icon className="size-4 shrink-0" />
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}
@@ -83,16 +86,17 @@ function NavContent({ user }: { user: User | null }) {
 
 function MobileBottomNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const items = [
-    { href: "/overview",  label: "Overview",  icon: IconLayoutDashboard },
-    { href: "/expenses",  label: "Expenses",  icon: IconTrendingDown },
-    { href: "/income",    label: "Income",    icon: IconTrendingUp },
+    { href: "/overview",  labelKey: "nav_overview" as const,  icon: IconLayoutDashboard },
+    { href: "/expenses",  labelKey: "nav_expenses" as const,  icon: IconTrendingDown },
+    { href: "/income",    labelKey: "nav_income" as const,    icon: IconTrendingUp },
   ];
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden border-t bg-card/95 backdrop-blur-sm">
       <div className="flex items-center justify-around h-16 px-2">
-        {items.map(({ href, label, icon: Icon }, i) => {
+        {items.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
@@ -103,7 +107,7 @@ function MobileBottomNav() {
               <>
                 <Icon className={cn("size-5 transition-colors", active ? "text-primary" : "text-muted-foreground")} />
                 <span className={cn("text-[10px] font-medium transition-colors", active ? "text-primary" : "text-muted-foreground")}>
-                  {label}
+                  {t(labelKey)}
                 </span>
               </>
             </Link>
@@ -116,6 +120,7 @@ function MobileBottomNav() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [particleColor, setParticleColor] = useState("#71717a");
 
@@ -171,6 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <LanguageToggle />
             <ThemeToggle />
             {user && (
               <DropdownMenu>
@@ -194,7 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={handleLogout}
                   >
                     <IconLogout className="size-4" />
-                    Sign out
+                    {t("sign_out")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
