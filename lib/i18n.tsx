@@ -124,6 +124,32 @@ const dict = {
   // Date picker
   pick_a_date: { en: "Pick a date", th: "เลือกวันที่" },
   done: { en: "Done", th: "เสร็จสิ้น" },
+
+  // Multi-select / bulk delete
+  select: { en: "Select", th: "เลือก" },
+  selected_count: { en: "selected", th: "ที่เลือก" },
+  select_all: { en: "Select all", th: "เลือกทั้งหมด" },
+  deselect_all: { en: "Deselect all", th: "ยกเลิกการเลือกทั้งหมด" },
+  delete_selected: { en: "Delete", th: "ลบ" },
+  confirm_bulk_delete_title: { en: "Delete transactions?", th: "ลบรายการธุรกรรม?" },
+  confirm_bulk_delete_desc: {
+    en: "This will permanently delete the selected transactions. This action cannot be undone.",
+    th: "การลบนี้จะลบรายการที่เลือกอย่างถาวรและไม่สามารถย้อนกลับได้",
+  },
+  tx_bulk_deleted: { en: "Transactions deleted", th: "ลบรายการแล้ว" },
+  tx_bulk_delete_failed: { en: "Failed to delete transactions", th: "ลบรายการไม่สำเร็จ" },
+
+  // Cash flow chart
+  cash_flow: { en: "Cash Flow", th: "กระแสเงินสด" },
+  cash_flow_subtitle: {
+    en: "Income, expenses and balance over time",
+    th: "รายรับ รายจ่าย และยอดคงเหลือตามเวลา",
+  },
+  range_7d: { en: "7D", th: "7 วัน" },
+  range_30d: { en: "30D", th: "30 วัน" },
+  range_90d: { en: "90D", th: "90 วัน" },
+  range_all: { en: "All", th: "ทั้งหมด" },
+  no_chart_data: { en: "No data to display", th: "ไม่มีข้อมูลให้แสดง" },
 } as const;
 
 export type DictKey = keyof typeof dict;

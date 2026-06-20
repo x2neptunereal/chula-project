@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -33,6 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
+import { CashFlowChart } from "@/components/cash-flow-chart";
 
 interface Transaction {
   _id: string;
@@ -102,6 +104,12 @@ export default function OverviewPage() {
   const [editForm, setEditForm] = useState({ type: "expense", amount: "", date: "", description: "" });
   const [editLoading, setEditLoading] = useState(false);
 
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -145,21 +153,22 @@ export default function OverviewPage() {
     );
   });
 
-  // For summary always show all-time totals separately
-  const [allTotals, setAllTotals] = useState({ income: 0, expenses: 0 });
+  // For summary + chart, always pull the full unfiltered transaction list separately
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     fetch("/api/transactions")
       .then((r) => r.json())
       .then((d) => {
-        const txs: Transaction[] = d.transactions ?? [];
-        setAllTotals({
-          income: txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-          expenses: txs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
-        });
+        setAllTransactions(d.transactions ?? []);
       })
       .catch(() => {});
   }, [transactions]); // refresh when list changes
+
+  const allTotals = {
+    income: allTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+    expenses: allTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+  };
 
   async function handleDelete(id: string) {
     try {
@@ -169,6 +178,49 @@ export default function OverviewPage() {
       fetchTransactions();
     } catch {
       toast.error(t("tx_delete_failed"));
+    }
+  }
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      prev.size === filteredTransactions.length
+        ? new Set()
+        : new Set(filteredTransactions.map((tx) => tx._id))
+    );
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleteLoading(true);
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t("tx_bulk_deleted"));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      setBulkDeleteOpen(false);
+      fetchTransactions();
+    } catch {
+      toast.error(t("tx_bulk_delete_failed"));
+    } finally {
+      setBulkDeleteLoading(false);
     }
   }
 
@@ -248,6 +300,9 @@ export default function OverviewPage() {
         />
       </div>
 
+      {/* Cash flow chart */}
+      <CashFlowChart transactions={allTransactions} />
+
       {/* Transaction list */}
       <Card>
         <CardHeader>
@@ -255,12 +310,54 @@ export default function OverviewPage() {
             {/* Title row */}
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">{t("transactions")}</CardTitle>
-              {hasFilter && (
-                <Button variant="ghost" size="xs" onClick={clearFilters} className="gap-1 text-xs">
-                  <IconX className="size-3" /> {t("clear")}
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {hasFilter && (
+                  <Button variant="ghost" size="xs" onClick={clearFilters} className="gap-1 text-xs">
+                    <IconX className="size-3" /> {t("clear")}
+                  </Button>
+                )}
+                {filteredTransactions.length > 0 && (
+                  <Button
+                    variant={selectMode ? "secondary" : "ghost"}
+                    size="xs"
+                    onClick={toggleSelectMode}
+                    className="gap-1 text-xs"
+                  >
+                    <IconCheck className="size-3" /> {selectMode ? t("cancel") : t("select")}
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Bulk selection bar */}
+            {selectMode && (
+              <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={
+                      filteredTransactions.length > 0 &&
+                      selectedIds.size === filteredTransactions.length
+                    }
+                    onCheckedChange={toggleSelectAll}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {selectedIds.size > 0
+                      ? `${selectedIds.size} ${t("selected_count")}`
+                      : t("select_all")}
+                  </span>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="xs"
+                  className="gap-1 text-xs"
+                  disabled={selectedIds.size === 0}
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  <IconTrash className="size-3" /> {t("delete_selected")}
+                  {selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                </Button>
+              </div>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -310,7 +407,23 @@ export default function OverviewPage() {
           ) : (
             <div className="flex flex-col divide-y divide-border -mx-0">
               {filteredTransactions.map((tx) => (
-                <div key={tx._id} className="flex items-center gap-3 py-3 group">
+                <div
+                  key={tx._id}
+                  className={`flex items-center gap-3 py-3 group ${
+                    selectMode ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => selectMode && toggleSelected(tx._id)}
+                >
+                  {/* Checkbox (select mode only) */}
+                  {selectMode && (
+                    <Checkbox
+                      checked={selectedIds.has(tx._id)}
+                      onCheckedChange={() => toggleSelected(tx._id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0"
+                    />
+                  )}
+
                   {/* Type indicator */}
                   <div
                     className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${
@@ -350,12 +463,16 @@ export default function OverviewPage() {
                           <span className="text-muted-foreground/60">· {format(parseISO(tx.date), "HH:mm")}</span>
                         )}
                       </span>
-                      <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" onClick={() => openEdit(tx)}>
-                        <IconPencil className="size-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive shrink-0" onClick={() => handleDelete(tx._id)}>
-                        <IconTrash className="size-3.5" />
-                      </Button>
+                      {!selectMode && (
+                        <>
+                          <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" onClick={() => openEdit(tx)}>
+                            <IconPencil className="size-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive shrink-0" onClick={() => handleDelete(tx._id)}>
+                            <IconTrash className="size-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -431,6 +548,31 @@ export default function OverviewPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm bulk delete dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && setBulkDeleteOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("confirm_bulk_delete_title")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("confirm_bulk_delete_desc")}</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBulkDeleteOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={bulkDeleteLoading}
+              onClick={handleBulkDelete}
+            >
+              {bulkDeleteLoading && <IconLoader2 className="size-4 animate-spin" />}
+              <IconTrash className="size-4" />
+              {t("delete_selected")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

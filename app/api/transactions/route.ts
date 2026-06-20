@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Transaction from "@/lib/models/Transaction";
+import Slip from "@/lib/models/Slip";
 import { getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -71,6 +72,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ transaction }, { status: 201 });
   } catch (error) {
     console.error("Create transaction error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/** Bulk delete — body: { ids: string[] } */
+export async function DELETE(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { ids } = await request.json();
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "ids must be a non-empty array" }, { status: 400 });
+    }
+
+    await connectDB();
+
+    const result = await Transaction.deleteMany({
+      _id: { $in: ids },
+      userId: session.userId,
+    });
+
+    // Also remove any linked slip records so those slips can be re-uploaded later
+    await Slip.deleteMany({ transactionId: { $in: ids }, userId: session.userId });
+
+    return NextResponse.json({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error("Bulk delete transactions error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
