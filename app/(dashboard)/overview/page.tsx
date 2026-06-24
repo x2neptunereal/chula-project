@@ -99,7 +99,7 @@ export default function OverviewPage() {
   const { t } = useLanguage();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
+  const [typeFilter, setTypeFilter] = useState<("all" | "income") | ExpenseCategory>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
@@ -387,7 +387,11 @@ export default function OverviewPage() {
                   <SelectContent>
                     <SelectItem value="all">{t("all_types")}</SelectItem>
                     <SelectItem value="income">{t("income_only")}</SelectItem>
-                    <SelectItem value="expense">{t("expenses_only")}</SelectItem>
+                    {EXPENSE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {t(CATEGORY_LABEL_KEYS[cat])}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
