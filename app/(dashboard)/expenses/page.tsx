@@ -21,7 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { parseSlipText, type ParsedSlip, type BankType } from "@/lib/slip-parser";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n";
+import { EXPENSE_CATEGORIES, CATEGORY_LABEL_KEYS, type ExpenseCategory } from "@/lib/expense-categories";
 
 // ─── Timezone helper ──────────────────────────────────────────────────────────
 // new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
@@ -54,6 +56,7 @@ interface SlipEntry {
   amount: string;
   date: string;
   description: string;
+  category: ExpenseCategory;
   transactionNumber: string;
   bank: BankType;
   errorMsg?: string;
@@ -133,6 +136,7 @@ export default function ExpensesPage() {
   const [manualAmount, setManualAmount] = useState("");
   const [manualDate, setManualDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm"));
   const [manualDesc, setManualDesc] = useState("");
+  const [manualCategory, setManualCategory] = useState<ExpenseCategory | "">("");
   const [manualLoading, setManualLoading] = useState(false);
   const [manualSaved, setManualSaved] = useState(false);
 
@@ -159,6 +163,7 @@ export default function ExpensesPage() {
           amount: parsed,
           date: localToISO(manualDate || format(new Date(), "yyyy-MM-dd HH:mm")),
           description: manualDesc.trim() || t("expense"),
+          category: manualCategory,
         }),
       });
       if (!res.ok) throw new Error();
@@ -167,6 +172,7 @@ export default function ExpensesPage() {
       setManualAmount("");
       setManualDate(format(new Date(), "yyyy-MM-dd"));
       setManualDesc("");
+      setManualCategory("");
       setTimeout(() => setManualSaved(false), 2000);
     } catch {
       toast.error(t("expense_save_failed"));
@@ -189,6 +195,7 @@ export default function ExpensesPage() {
       amount: "",
       date: format(new Date(), "yyyy-MM-dd"),
       description: "",
+      category: "entertainment",
       transactionNumber: "",
       bank: "unknown",
     }));
@@ -305,6 +312,7 @@ export default function ExpensesPage() {
             amount,
             date: localToISO(slip.date),
             description: slip.description || `${t("slip")} (${BANK_LABELS[slip.bank]})`,
+            category: slip.category,
           }),
         });
         if (res.ok) {
@@ -384,6 +392,24 @@ export default function ExpensesPage() {
                 value={manualDesc}
                 onChange={(e) => setManualDesc(e.target.value)}
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="m-category">{t("expense_category")}</Label>
+              <Select
+                value={manualCategory}
+                onValueChange={(v) => setManualCategory(v as ExpenseCategory)}
+              >
+                <SelectTrigger id="m-category" className="w-full">
+                  <SelectValue placeholder={t("select_category")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {t(CATEGORY_LABEL_KEYS[cat])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="submit"
@@ -659,6 +685,24 @@ function SlipCard({
               onChange={(e) => onUpdate({ description: e.target.value })}
               placeholder={t("eg_payment_groceries")}
             />
+          </div>
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <Label className="text-xs">{t("expense_category")}</Label>
+            <Select
+              value={slip.category}
+              onValueChange={(v) => onUpdate({ category: v as ExpenseCategory })}
+            >
+              <SelectTrigger className="h-7 text-xs w-full">
+                <SelectValue placeholder={t("select_category")} />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {t(CATEGORY_LABEL_KEYS[cat])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Raw OCR text — for debugging empty results */}

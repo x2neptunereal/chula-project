@@ -1,4 +1,8 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/lib/expense-categories";
+
+export { EXPENSE_CATEGORIES };
+export type { ExpenseCategory };
 
 export interface ITransaction extends Document {
   userId: Types.ObjectId;
@@ -6,6 +10,7 @@ export interface ITransaction extends Document {
   amount: number;
   date: Date;
   description?: string;
+  category: ExpenseCategory;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +41,11 @@ const TransactionSchema = new Schema<ITransaction>(
       type: String,
       trim: true,
       default: "",
+    },
+    category: {
+      type: String,
+      enum: EXPENSE_CATEGORIES,
+      required: false,
     },
   },
   { timestamps: true }

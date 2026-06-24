@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Slip from "@/lib/models/Slip";
 import Transaction from "@/lib/models/Transaction";
 import { getSession } from "@/lib/auth";
+import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 
 function parseDate(s?: string): Date {
   if (!s) return new Date();
@@ -60,10 +61,13 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { transactionNumber, bank, amount, date, description } = await request.json();
+    const { transactionNumber, bank, amount, date, description, category } = await request.json();
 
     if (!transactionNumber || !amount) {
       return NextResponse.json({ error: "transactionNumber and amount are required" }, { status: 400 });
+    }
+    if (category && !EXPENSE_CATEGORIES.includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
     }
 
     await connectDB();
@@ -84,6 +88,7 @@ export async function PUT(request: NextRequest) {
       amount,
       date: parseDate(date),
       description: description ?? `Slip: ${transactionNumber}`,
+      category: category || undefined,
     });
 
     // Record the slip for future duplicate detection

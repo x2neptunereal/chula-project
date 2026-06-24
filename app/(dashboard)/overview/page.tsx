@@ -14,6 +14,10 @@ import {
   IconX,
   IconCheck,
   IconSearch,
+  IconShoppingCartFilled,
+  IconDeviceGamepad2Filled,
+  IconReceiptFilled,
+  IconBulbFilled,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
 import { CashFlowChart } from "@/components/cash-flow-chart";
+import { EXPENSE_CATEGORIES, CATEGORY_LABEL_KEYS, type ExpenseCategory } from "@/lib/expense-categories";
 
 interface Transaction {
   _id: string;
@@ -42,6 +47,7 @@ interface Transaction {
   amount: number;
   date: string;
   description?: string;
+  category?: ExpenseCategory;
 }
 
 function formatCurrency(amount: number) {
@@ -78,9 +84,8 @@ function SummaryCard({
           <Skeleton className="h-8 w-36" />
         ) : (
           <span
-            className={`text-2xl font-bold tracking-tight ${
-              isBalance && amount < 0 ? "text-rose-600 dark:text-rose-400" : ""
-            }`}
+            className={`text-2xl font-bold tracking-tight ${isBalance && amount < 0 ? "text-rose-600 dark:text-rose-400" : ""
+              }`}
           >
             {formatCurrency(amount)}
           </span>
@@ -101,7 +106,7 @@ export default function OverviewPage() {
 
   // Edit state
   const [editTx, setEditTx] = useState<Transaction | null>(null);
-  const [editForm, setEditForm] = useState({ type: "expense", amount: "", date: "", description: "" });
+  const [editForm, setEditForm] = useState<{ type: string; amount: string; date: string; description: string; category: ExpenseCategory | "" }>({ type: "expense", amount: "", date: "", description: "", category: "" });
   const [editLoading, setEditLoading] = useState(false);
 
   // Multi-select state
@@ -162,7 +167,7 @@ export default function OverviewPage() {
       .then((d) => {
         setAllTransactions(d.transactions ?? []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [transactions]); // refresh when list changes
 
   const allTotals = {
@@ -231,6 +236,7 @@ export default function OverviewPage() {
       amount: String(tx.amount),
       date: tx.date ? format(parseISO(tx.date), "yyyy-MM-dd HH:mm") : "",
       description: tx.description ?? "",
+      category: tx.category ?? "",
     });
   }
 
@@ -247,6 +253,7 @@ export default function OverviewPage() {
           amount: parseFloat(editForm.amount),
           date: editForm.date || undefined,
           description: editForm.description,
+          category: editForm.type === "expense" ? editForm.category : undefined,
         }),
       });
       if (!res.ok) throw new Error();
@@ -409,9 +416,8 @@ export default function OverviewPage() {
               {filteredTransactions.map((tx) => (
                 <div
                   key={tx._id}
-                  className={`flex items-center gap-3 py-3 group ${
-                    selectMode ? "cursor-pointer" : ""
-                  }`}
+                  className={`flex items-center gap-3 py-3 group ${selectMode ? "cursor-pointer" : ""
+                    }`}
                   onClick={() => selectMode && toggleSelected(tx._id)}
                 >
                   {/* Checkbox (select mode only) */}
@@ -426,16 +432,28 @@ export default function OverviewPage() {
 
                   {/* Type indicator */}
                   <div
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${
-                      tx.type === "income"
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${tx.type === "income"
                         ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
                         : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
-                    }`}
+                      }`}
                   >
                     {tx.type === "income" ? (
                       <IconTrendingUp className="size-4" />
                     ) : (
-                      <IconTrendingDown className="size-4" />
+                      (() => {
+                        switch (tx.category) {
+                          case "entertainment":
+                            return <IconDeviceGamepad2Filled className="size-4" />;
+                          case "shopping":
+                            return <IconShoppingCartFilled className="size-4" />;
+                          case "investment_transport_recurring":
+                            return <IconReceiptFilled className="size-4" />;
+                          case "basic_utilities":
+                            return <IconBulbFilled className="size-4" />;
+                          default:
+                            return <IconTrendingDown className="size-4" />;
+                        }
+                      })()
                     )}
                   </div>
 
@@ -446,11 +464,10 @@ export default function OverviewPage() {
                       <span className="text-sm font-medium truncate">
                         {tx.description || (tx.type === "income" ? t("income") : t("expense"))}
                       </span>
-                      <span className={`text-sm font-semibold shrink-0 ${
-                        tx.type === "income"
+                      <span className={`text-sm font-semibold shrink-0 ${tx.type === "income"
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-rose-600 dark:text-rose-400"
-                      }`}>
+                        }`}>
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </span>
                     </div>
@@ -536,6 +553,27 @@ export default function OverviewPage() {
                 placeholder={t("eg_grocery")}
               />
             </div>
+
+            {editForm.type === "expense" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-category">{t("expense_category")}</Label>
+                <Select
+                  value={editForm.category}
+                  onValueChange={(v) => setEditForm((p) => ({ ...p, category: v as ExpenseCategory }))}
+                >
+                  <SelectTrigger id="edit-category">
+                    <SelectValue placeholder={t("select_category")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPENSE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {t(CATEGORY_LABEL_KEYS[cat])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTx(null)}>

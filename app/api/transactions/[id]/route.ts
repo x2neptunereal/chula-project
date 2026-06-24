@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Transaction from "@/lib/models/Transaction";
+import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import Slip from "@/lib/models/Slip";
 import { getSession } from "@/lib/auth";
 
@@ -19,17 +20,20 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const { type, amount, date, description } = await request.json();
+    const { type, amount, date, description, category } = await request.json();
 
     if (!type || !amount) {
       return NextResponse.json({ error: "type and amount are required" }, { status: 400 });
+    }
+    if (category && !EXPENSE_CATEGORIES.includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
     }
 
     await connectDB();
 
     const transaction = await Transaction.findOneAndUpdate(
       { _id: id, userId: session.userId },
-      { type, amount, date: parseDate(date), description },
+      { type, amount, date: parseDate(date), description, category: category },
       { new: true, runValidators: true }
     );
 

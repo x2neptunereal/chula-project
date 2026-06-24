@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Transaction from "@/lib/models/Transaction";
+import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import Slip from "@/lib/models/Slip";
 import { getSession } from "@/lib/auth";
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { type, amount, date, description } = await request.json();
+    const { type, amount, date, description, category } = await request.json();
 
     if (!type || !amount) {
       return NextResponse.json({ error: "type and amount are required" }, { status: 400 });
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest) {
     if (typeof amount !== "number" || amount <= 0) {
       return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
     }
+    if (category && !EXPENSE_CATEGORIES.includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
 
     await connectDB();
 
@@ -67,6 +71,7 @@ export async function POST(request: NextRequest) {
       amount,
       date: parseDate(date),
       description: description ?? "",
+      category: category,
     });
 
     return NextResponse.json({ transaction }, { status: 201 });
