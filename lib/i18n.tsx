@@ -10,6 +10,7 @@ const dict = {
   nav_overview: { en: "Overview", th: "ภาพรวม" },
   nav_expenses: { en: "Expenses", th: "รายจ่าย" },
   nav_income: { en: "Income", th: "รายรับ" },
+  nav_admin: { en: "Admin", th: "ผู้ดูแลระบบ" },
   sign_out: { en: "Sign out", th: "ออกจากระบบ" },
 
   // Login page
@@ -159,6 +160,20 @@ const dict = {
   range_90d: { en: "90D", th: "90 วัน" },
   range_all: { en: "All", th: "ทั้งหมด" },
   no_chart_data: { en: "No data to display", th: "ไม่มีข้อมูลให้แสดง" },
+
+  // Admin page
+  admin_title: { en: "Admin Panel", th: "แผงควบคุมผู้ดูแลระบบ" },
+  admin_subtitle: {
+    en: "View any user's dashboard and export their stats",
+    th: "ดูข้อมูลของผู้ใช้ทุกคนและส่งออกสถิติ",
+  },
+  admin_users: { en: "Users", th: "ผู้ใช้งาน" },
+  admin_no_users: { en: "No users found", th: "ไม่พบผู้ใช้งาน" },
+  admin_tx_count_suffix: { en: "tx", th: "รายการ" },
+  admin_back_to_users: { en: "Back to users", th: "กลับไปหน้ารายชื่อผู้ใช้" },
+  admin_last_7_days: { en: "Last 7 days", th: "7 วันล่าสุด" },
+  admin_last_30_days: { en: "Last 30 days", th: "30 วันล่าสุด" },
+  admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
 } as const;
 
 export type DictKey = keyof typeof dict;

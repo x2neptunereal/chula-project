@@ -11,8 +11,10 @@ import {
   IconLogout,
   IconMinus,
   IconPlus,
+  IconShieldLock,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { ADMIN_EMAIL } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import { Particles } from "@/components/ui/particles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,6 +47,10 @@ const navItems = [
 function NavContent({ user }: { user: User | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const items =
+    user?.email === ADMIN_EMAIL
+      ? [...navItems, { href: "/admin", labelKey: "nav_admin" as const, icon: IconShieldLock }]
+      : navItems;
 
   return (
     <div className="flex h-full flex-col">
@@ -60,7 +66,7 @@ function NavContent({ user }: { user: User | null }) {
 
       {/* Nav links */}
       <nav className="flex flex-col gap-1 p-2 flex-1 mt-2">
-        {navItems.map(({ href, labelKey, icon: Icon }) => {
+        {items.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
@@ -84,13 +90,16 @@ function NavContent({ user }: { user: User | null }) {
   );
 }
 
-function MobileBottomNav() {
+function MobileBottomNav({ user }: { user: User | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const items = [
     { href: "/overview",  labelKey: "nav_overview" as const,  icon: IconLayoutDashboard },
     { href: "/expenses",  labelKey: "nav_expenses" as const,  icon: IconTrendingDown },
     { href: "/income",    labelKey: "nav_income" as const,    icon: IconTrendingUp },
+    ...(user?.email === ADMIN_EMAIL
+      ? [{ href: "/admin", labelKey: "nav_admin" as const, icon: IconShieldLock }]
+      : []),
   ];
 
   return (
@@ -213,7 +222,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
 
         {/* Mobile bottom nav */}
-        <MobileBottomNav />
+        <MobileBottomNav user={user} />
       </div>
 
       <Toaster richColors position="top-right" />
