@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 
 interface UserSummary {
   id: string;
@@ -94,7 +94,7 @@ export default function AdminPage() {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
-        if (d.user?.email === ADMIN_EMAIL) {
+        if (isAdminEmail(d.user?.email)) {
           setAllowed(true);
         } else {
           router.replace("/overview");

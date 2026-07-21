@@ -14,7 +14,7 @@ import {
   IconShieldLock,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 import { Particles } from "@/components/ui/particles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -48,7 +48,7 @@ function NavContent({ user }: { user: User | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const items =
-    user?.email === ADMIN_EMAIL
+    isAdminEmail(user?.email)
       ? [...navItems, { href: "/admin", labelKey: "nav_admin" as const, icon: IconShieldLock }]
       : navItems;
 
@@ -97,7 +97,7 @@ function MobileBottomNav({ user }: { user: User | null }) {
     { href: "/overview",  labelKey: "nav_overview" as const,  icon: IconLayoutDashboard },
     { href: "/expenses",  labelKey: "nav_expenses" as const,  icon: IconTrendingDown },
     { href: "/income",    labelKey: "nav_income" as const,    icon: IconTrendingUp },
-    ...(user?.email === ADMIN_EMAIL
+    ...(isAdminEmail(user?.email)
       ? [{ href: "/admin", labelKey: "nav_admin" as const, icon: IconShieldLock }]
       : []),
   ];
