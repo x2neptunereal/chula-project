@@ -6,6 +6,10 @@ import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { computeStatBlock, periodToStartDate, type StatBlock } from "@/lib/stats";
 
+function isValidDate(d: Date): boolean {
+  return !Number.isNaN(d.getTime());
+}
+
 function fmt(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " บาท";
 }
@@ -31,7 +35,11 @@ const CATEGORY_TH: Record<string, string> = {
   basic_utilities: "สาธารณูปโภคขั้นพื้นฐาน",
 };
 
-/** GET /api/admin/export?userId=...&period=7|30 — admin only. Returns a plain .txt report. */
+/**
+ * GET /api/admin/export?userId=...&period=7|30|custom
+ * When period=custom, also requires startDate=yyyy-MM-dd&endDate=yyyy-MM-dd.
+ * Admin only. Returns a plain .txt report.
+ */
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!isAdmin(session)) {
@@ -41,10 +49,38 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
   const periodParam = searchParams.get("period");
-  const period = periodParam === "7" ? "7" : "30"; // only 7 or 30 allowed, default 30
 
   if (!userId) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  }
+
+  let startDate: Date | null;
+  let endDate: Date;
+  let periodLabel: string;
+  let fileTag: string;
+
+  if (periodParam === "custom") {
+    const startParam = searchParams.get("startDate");
+    const endParam = searchParams.get("endDate");
+    if (!startParam || !endParam) {
+      return NextResponse.json(
+        { error: "startDate and endDate are required for a custom range" },
+        { status: 400 }
+      );
+    }
+    startDate = new Date(`${startParam}T00:00:00.000`);
+    endDate = new Date(`${endParam}T23:59:59.999`);
+    if (!isValidDate(startDate) || !isValidDate(endDate) || startDate > endDate) {
+      return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
+    }
+    periodLabel = `Custom (${startParam} to ${endParam})`;
+    fileTag = `custom_${startParam}_to_${endParam}`;
+  } else {
+    const period = periodParam === "7" ? "7" : "30"; // only 7 or 30 allowed, default 30
+    startDate = periodToStartDate(period);
+    endDate = new Date();
+    periodLabel = `Last ${period} days`;
+    fileTag = `${period}d`;
   }
 
   await connectDB();
@@ -54,12 +90,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const startDate = periodToStartDate(period);
-  const now = new Date();
-
   const transactions = (await Transaction.find({
     userId,
-    ...(startDate ? { date: { $gte: startDate } } : {}),
+    ...(startDate ? { date: { $gte: startDate, $lte: endDate } } : {}),
   })
     .sort({ date: 1 }) // sort by time, oldest first
     .lean()) as unknown as ITransaction[];
@@ -70,6 +103,7 @@ export async function GET(request: NextRequest) {
   const incomeStats = computeStatBlock(incomeAmounts);
   const expenseStats = computeStatBlock(expenseAmounts);
   const balance = incomeStats.total - expenseStats.total;
+  const now = new Date();
 
   const lines: string[] = [];
   lines.push("=".repeat(60));
@@ -77,9 +111,9 @@ export async function GET(request: NextRequest) {
   lines.push("=".repeat(60));
   lines.push("");
   lines.push(`ผู้ใช้ (User):        ${user.username} (${user.email})`);
-  lines.push(`ช่วงเวลา (Period):    Last ${period} days`);
+  lines.push(`ช่วงเวลา (Period):    ${periodLabel}`);
   lines.push(
-    `ตั้งแต่ - ถึง (Range): ${startDate ? startDate.toISOString().slice(0, 10) : "-"} to ${now
+    `ตั้งแต่ - ถึง (Range): ${startDate ? startDate.toISOString().slice(0, 10) : "-"} to ${endDate
       .toISOString()
       .slice(0, 10)}`
   );
@@ -117,7 +151,7 @@ export async function GET(request: NextRequest) {
 
   const body = lines.join("\n");
   const safeName = user.username.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const filename = `stats_${safeName}_${period}d_${now.toISOString().slice(0, 10)}.txt`;
+  const filename = `stats_${safeName}_${fileTag}_${now.toISOString().slice(0, 10)}.txt`;
 
   return new NextResponse(body, {
     status: 200,

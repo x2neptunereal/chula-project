@@ -12,6 +12,9 @@ const dict = {
   nav_income: { en: "Income", th: "รายรับ" },
   nav_admin: { en: "Admin", th: "ผู้ดูแลระบบ" },
   sign_out: { en: "Sign out", th: "ออกจากระบบ" },
+  change_name: { en: "Change name", th: "เปลี่ยนชื่อ" },
+  name_updated: { en: "Name updated", th: "เปลี่ยนชื่อสำเร็จ" },
+  name_update_failed: { en: "Failed to update name", th: "เปลี่ยนชื่อไม่สำเร็จ" },
 
   // Login page
   welcome_back: { en: "Welcome back", th: "ยินดีต้อนรับกลับ" },
@@ -173,6 +176,7 @@ const dict = {
   admin_back_to_users: { en: "Back to users", th: "กลับไปหน้ารายชื่อผู้ใช้" },
   admin_last_7_days: { en: "Last 7 days", th: "7 วันล่าสุด" },
   admin_last_30_days: { en: "Last 30 days", th: "30 วันล่าสุด" },
+  admin_custom_range: { en: "Custom range", th: "กำหนดช่วงเอง" },
   admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
 } as const;
 

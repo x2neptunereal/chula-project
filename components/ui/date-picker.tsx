@@ -26,6 +26,67 @@ interface DatePickerProps {
   showTime?: boolean;
 }
 
+/** Editable hour/minute box — click the chevrons or type a number directly. */
+function TimeField({
+  value,
+  max,
+  onCommit,
+  ariaLabel,
+}: {
+  value: number;
+  max: number;
+  onCommit: (next: number) => void;
+  ariaLabel: string;
+}) {
+  const [text, setText] = React.useState(String(value).padStart(2, "0"));
+
+  // Keep the field in sync when the value changes elsewhere (chevrons, external prop change)
+  React.useEffect(() => {
+    setText(String(value).padStart(2, "0"));
+  }, [value]);
+
+  function commit(raw: string) {
+    if (raw === "") {
+      setText(String(value).padStart(2, "0"));
+      return;
+    }
+    let n = parseInt(raw, 10);
+    if (Number.isNaN(n)) n = value;
+    n = Math.min(Math.max(n, 0), max);
+    setText(String(n).padStart(2, "0"));
+    onCommit(n);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      aria-label={ariaLabel}
+      value={text}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+        setText(digits);
+        if (digits.length === 2) commit(digits);
+      }}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          onCommit(Math.min(value + 1, max));
+        }
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          onCommit(Math.max(value - 1, 0));
+        }
+      }}
+      className="w-8 rounded-sm bg-transparent text-center text-sm font-mono tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+    />
+  );
+}
+
 export function DatePicker({
   value,
   onChange,
@@ -142,9 +203,12 @@ export function DatePicker({
               >
                 ‹
               </button>
-              <span className="w-8 text-center text-sm font-mono tabular-nums">
-                {String(hour).padStart(2, "0")}
-              </span>
+              <TimeField
+                value={hour}
+                max={23}
+                ariaLabel="Hour"
+                onCommit={(h) => emit(selected, h, minute)}
+              />
               <button
                 type="button"
                 onClick={() => handleHour(1)}
@@ -165,9 +229,12 @@ export function DatePicker({
               >
                 ‹
               </button>
-              <span className="w-8 text-center text-sm font-mono tabular-nums">
-                {String(minute).padStart(2, "0")}
-              </span>
+              <TimeField
+                value={minute}
+                max={59}
+                ariaLabel="Minute"
+                onCommit={(m) => emit(selected, hour, m)}
+              />
               <button
                 type="button"
                 onClick={() => handleMinute(5)}

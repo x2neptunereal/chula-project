@@ -12,10 +12,16 @@ import {
   IconMinus,
   IconPlus,
   IconShieldLock,
+  IconUserEdit,
+  IconLoader2,
+  IconCheck,
 } from "@tabler/icons-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isAdminEmail } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Particles } from "@/components/ui/particles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +37,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface User {
   userId: string;
@@ -133,6 +146,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null);
   const [particleColor, setParticleColor] = useState("#71717a");
 
+  // Change name dialog
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [renameLoading, setRenameLoading] = useState(false);
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
@@ -156,6 +174,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
+  }
+
+  function openRename() {
+    setNewUsername(user?.username ?? "");
+    setRenameOpen(true);
+  }
+
+  async function handleRename(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newUsername.trim();
+    if (!trimmed) return;
+    setRenameLoading(true);
+    try {
+      const res = await fetch("/api/auth/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setUser((prev) => (prev ? { ...prev, username: data.user.username } : prev));
+      toast.success(t("name_updated"));
+      setRenameOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("name_update_failed"));
+    } finally {
+      setRenameLoading(false);
+    }
   }
 
   return (
@@ -204,6 +250,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="text-xs text-muted-foreground">{user.email}</span>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 cursor-pointer" onClick={openRename}>
+                    <IconUserEdit className="size-4" />
+                    {t("change_name")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive gap-2 cursor-pointer"
                     onClick={handleLogout}
@@ -224,6 +275,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Mobile bottom nav */}
         <MobileBottomNav user={user} />
       </div>
+
+      {/* Change name dialog */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("change_name")}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleRename} className="flex flex-col gap-4 pt-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-username">{t("username")}</Label>
+              <Input
+                id="new-username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                maxLength={30}
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
+                {t("cancel")}
+              </Button>
+              <Button type="submit" disabled={renameLoading || !newUsername.trim()}>
+                {renameLoading && <IconLoader2 className="size-4 animate-spin" />}
+                <IconCheck className="size-4" />
+                {t("save_changes")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Toaster richColors position="top-right" />
     </div>

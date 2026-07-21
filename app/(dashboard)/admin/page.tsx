@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useLanguage } from "@/lib/i18n";
 import { isAdminEmail } from "@/lib/admin";
 
@@ -86,8 +87,14 @@ export default function AdminPage() {
   const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [exportPeriod, setExportPeriod] = useState<"7" | "30">("30");
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "custom">("30");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  const customRangeValid = !!customStart && !!customEnd && customStart <= customEnd;
+  const exportDisabled =
+    exporting || (exportPeriod === "custom" && !customRangeValid);
 
   // Admin gate
   useEffect(() => {
@@ -133,14 +140,20 @@ export default function AdminPage() {
 
   async function handleExport() {
     if (!selectedUser) return;
+    if (exportPeriod === "custom" && !customRangeValid) return;
     setExporting(true);
     try {
-      const res = await fetch(`/api/admin/export?userId=${selectedUser.id}&period=${exportPeriod}`);
+      const params = new URLSearchParams({ userId: selectedUser.id, period: exportPeriod });
+      if (exportPeriod === "custom") {
+        params.set("startDate", customStart);
+        params.set("endDate", customEnd);
+      }
+      const res = await fetch(`/api/admin/export?${params}`);
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") ?? "";
       const match = disposition.match(/filename="(.+)"/);
-      const filename = match?.[1] ?? `stats_${selectedUser.username}_${exportPeriod}d.txt`;
+      const filename = match?.[1] ?? `stats_${selectedUser.username}_${exportPeriod}.txt`;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -227,17 +240,36 @@ export default function AdminPage() {
               <IconArrowLeft className="size-4" /> {t("admin_back_to_users")}
             </Button>
 
-            <div className="flex items-center gap-2">
-              <Select value={exportPeriod} onValueChange={(v) => setExportPeriod(v as "7" | "30")}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={exportPeriod} onValueChange={(v) => setExportPeriod(v as "7" | "30" | "custom")}>
                 <SelectTrigger className="w-36">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
                   <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
+                  <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
                 </SelectContent>
               </Select>
-              <Button size="sm" className="gap-1.5" onClick={handleExport} disabled={exporting}>
+
+              {exportPeriod === "custom" && (
+                <>
+                  <DatePicker
+                    value={customStart}
+                    onChange={setCustomStart}
+                    placeholder={t("start_date")}
+                    className="w-36"
+                  />
+                  <DatePicker
+                    value={customEnd}
+                    onChange={setCustomEnd}
+                    placeholder={t("end_date")}
+                    className="w-36"
+                  />
+                </>
+              )}
+
+              <Button size="sm" className="gap-1.5" onClick={handleExport} disabled={exportDisabled}>
                 {exporting ? <IconLoader2 className="size-4 animate-spin" /> : <IconDownload className="size-4" />}
                 {t("admin_export_txt")}
               </Button>
