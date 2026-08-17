@@ -18,7 +18,7 @@ const dict = {
 
   // Login page
   welcome_back: { en: "Welcome back", th: "ยินดีต้อนรับกลับ" },
-  signin_subtitle: { en: "Sign in to your ZeroEntropy account", th: "เข้าสู่ระบบบัญชี ZeroEntropy ของคุณ" },
+  signin_subtitle: { en: "Sign in to your MONEX account", th: "เข้าสู่ระบบบัญชี MONEX ของคุณ" },
   email: { en: "Email", th: "อีเมล" },
   password: { en: "Password", th: "รหัสผ่าน" },
   sign_in: { en: "Sign in", th: "เข้าสู่ระบบ" },

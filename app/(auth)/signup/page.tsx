@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconMathAvg, IconLoader2 } from "@tabler/icons-react";
+import { IconChessKnightFilled, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,7 +67,7 @@ export default function SignupPage() {
       <CardHeader className="text-center">
         <div className="flex justify-center mb-2">
           <div className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <IconMathAvg stroke={2} className="size-5" />
+            <IconChessKnightFilled className="size-5" />
           </div>
         </div>
         <CardTitle className="text-xl">{t("create_account_title")}</CardTitle>

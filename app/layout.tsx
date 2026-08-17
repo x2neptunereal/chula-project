@@ -29,7 +29,7 @@ const lineSeedSansTH = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ZeroEntropy — Personal Finance Tracker",
+  title: "MONEX — Personal Finance Tracker",
   description: "Track your income, expenses, and balance in one place.",
 };
 

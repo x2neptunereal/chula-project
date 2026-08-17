@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  IconMathAvg,
+  IconChessKnightFilled,
   IconLayoutDashboard,
   IconTrendingDown,
   IconTrendingUp,
@@ -70,9 +70,9 @@ function NavContent({ user }: { user: User | null }) {
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5">
         <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <IconMathAvg stroke={2} className="size-4" />
+          <IconChessKnightFilled className="size-4" />
         </div>
-        <span className="text-base font-semibold tracking-tight">ZeroEntropy</span>
+        <span className="text-base font-semibold tracking-tight">MONEX</span>
       </div>
 
       <Separator />
@@ -225,9 +225,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="flex items-center gap-3 border-b px-4 py-3 bg-card">
           <div className="flex items-center gap-2 md:hidden">
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <IconMathAvg stroke={2} className="size-3.5" />
+              <IconChessKnightFilled className="size-3.5" />
             </div>
-            <span className="text-sm font-semibold">ZeroEntropy</span>
+            <span className="text-sm font-semibold">MONEX</span>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
