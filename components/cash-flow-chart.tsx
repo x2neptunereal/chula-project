@@ -219,7 +219,22 @@ export function CashFlowChart({ transactions }: { transactions: Transaction[] })
                   <ChartTooltipContent
                     indicator="dot"
                     labelFormatter={(d) => format(parseISO(String(d)), "d MMM yyyy")}
-                    formatter={(value) => formatCurrency(Number(value))}
+                    formatter={(value, name, item) => (
+                      <>
+                        <div
+                          className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+                          <span className="text-muted-foreground">
+                            {chartConfig[name as keyof typeof chartConfig]?.label ?? name}
+                          </span>
+                          <span className="shrink-0 font-mono font-medium tabular-nums text-foreground">
+                            {formatCurrency(Number(value))}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   />
                 }
               />

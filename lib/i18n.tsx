@@ -178,6 +178,7 @@ const dict = {
   admin_last_30_days: { en: "Last 30 days", th: "30 วันล่าสุด" },
   admin_custom_range: { en: "Custom range", th: "กำหนดช่วงเอง" },
   admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
+  export_failed: { en: "Failed to export data", th: "ส่งออกข้อมูลไม่สำเร็จ" },
 } as const;
 
 export type DictKey = keyof typeof dict;

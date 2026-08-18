@@ -18,6 +18,7 @@ import {
   IconDeviceGamepad2Filled,
   IconReceiptFilled,
   IconBulbFilled,
+  IconDownload,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,6 +115,15 @@ export default function OverviewPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  // Export state
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "custom">("30");
+  const [exportStart, setExportStart] = useState("");
+  const [exportEnd, setExportEnd] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const exportRangeValid = !!exportStart && !!exportEnd && exportStart <= exportEnd;
+  const exportDisabled = exporting || (exportPeriod === "custom" && !exportRangeValid);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -229,6 +239,37 @@ export default function OverviewPage() {
     }
   }
 
+  async function handleExport() {
+    if (exportPeriod === "custom" && !exportRangeValid) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ period: exportPeriod });
+      if (exportPeriod === "custom") {
+        params.set("startDate", exportStart);
+        params.set("endDate", exportEnd);
+      }
+      const res = await fetch(`/api/export?${params}`);
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="(.+)"/);
+      const filename = match?.[1] ?? `stats_${exportPeriod}.txt`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("export_failed"));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function openEdit(tx: Transaction) {
     setEditTx(tx);
     setEditForm({
@@ -276,9 +317,46 @@ export default function OverviewPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("overview_title")}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{t("overview_subtitle")}</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("overview_title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("overview_subtitle")}</p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={exportPeriod} onValueChange={(v) => setExportPeriod(v as "7" | "30" | "custom")}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
+              <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
+              <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {exportPeriod === "custom" && (
+            <>
+              <DatePicker
+                value={exportStart}
+                onChange={setExportStart}
+                placeholder={t("start_date")}
+                className="w-36"
+              />
+              <DatePicker
+                value={exportEnd}
+                onChange={setExportEnd}
+                placeholder={t("end_date")}
+                className="w-36"
+              />
+            </>
+          )}
+
+          <Button size="sm" className="gap-1.5" onClick={handleExport} disabled={exportDisabled}>
+            {exporting ? <IconLoader2 className="size-4 animate-spin" /> : <IconDownload className="size-4" />}
+            {t("admin_export_txt")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
