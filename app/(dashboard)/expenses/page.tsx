@@ -166,7 +166,10 @@ export default function ExpensesPage() {
           category: manualCategory,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.error || "Request failed");
+      }
       toast.success(t("expense_recorded"));
       setManualSaved(true);
       setManualAmount("");
@@ -174,8 +177,8 @@ export default function ExpensesPage() {
       setManualDesc("");
       setManualCategory("");
       setTimeout(() => setManualSaved(false), 2000);
-    } catch {
-      toast.error(t("expense_save_failed"));
+    } catch (err) {
+      toast.error(err instanceof Error && err.message ? err.message : t("expense_save_failed"));
     } finally {
       setManualLoading(false);
     }

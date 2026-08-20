@@ -28,14 +28,18 @@ function statBlockLines(label: string, s: StatBlock): string[] {
 }
 
 const CATEGORY_TH: Record<string, string> = {
-  entertainment: "ความบันเทิง",
+  food_drinks: "อาหารและเครื่องดื่ม",
+  travel: "เดินทาง",
+  education: "การศึกษา",
   shopping: "ช้อปปิ้ง",
-  investment_transport_recurring: "ลงทุน/เดินทาง/ค่าใช้จ่ายประจำ",
-  basic_utilities: "สาธารณูปโภคขั้นพื้นฐาน",
+  entertainment: "ความบันเทิง",
+  recurring_expenses: "ค่าใช้จ่ายประจำ",
+  health: "สุขภาพ",
+  social_gifts: "สังคมและของขวัญ",
 };
 
 /**
- * GET /api/export?period=7|30|custom
+ * GET /api/export?period=7|30|60|90|all|custom
  * When period=custom, also requires startDate=yyyy-MM-dd&endDate=yyyy-MM-dd.
  * Self-service export — returns a plain .txt report for the signed-in user's own data.
  */
@@ -70,8 +74,15 @@ export async function GET(request: NextRequest) {
     }
     periodLabel = `Custom (${startParam} to ${endParam})`;
     fileTag = `custom_${startParam}_to_${endParam}`;
+  } else if (periodParam === "all") {
+    startDate = null;
+    endDate = new Date();
+    periodLabel = "All time";
+    fileTag = "all";
   } else {
-    const period = periodParam === "7" ? "7" : "30"; // only 7 or 30 allowed, default 30
+    const period = (["7", "30", "60", "90"] as const).includes(periodParam as "7" | "30" | "60" | "90")
+      ? (periodParam as "7" | "30" | "60" | "90")
+      : "30"; // default 30
     startDate = periodToStartDate(period);
     endDate = new Date();
     periodLabel = `Last ${period} days`;

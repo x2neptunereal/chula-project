@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, parseISO, addDays, subDays, startOfDay } from "date-fns";
+import { format, parseISO, addDays, startOfDay } from "date-fns";
 import { Area, ComposedChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   ChartContainer,
   ChartTooltip,
@@ -21,8 +19,6 @@ interface Transaction {
   date: string;
   description?: string;
 }
-
-type RangePreset = "7d" | "30d" | "90d" | "all" | "custom";
 
 function buildSeries(transactions: Transaction[], from?: string, to?: string) {
   if (transactions.length === 0) return [];
@@ -66,28 +62,18 @@ function formatCurrency(amount: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 }
 
-export function CashFlowChart({ transactions }: { transactions: Transaction[] }) {
+export function CashFlowChart({
+  transactions,
+  from,
+  to,
+}: {
+  transactions: Transaction[];
+  /** yyyy-MM-dd. When omitted, the series starts at the earliest transaction / ends today. */
+  from?: string;
+  to?: string;
+}) {
   const { t } = useLanguage();
-  const [preset, setPreset] = useState<RangePreset>("30d");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
   const [visible, setVisible] = useState({ income: true, expense: true, balance: true });
-
-  const { from, to } = useMemo(() => {
-    const today = format(new Date(), "yyyy-MM-dd");
-    switch (preset) {
-      case "7d":
-        return { from: format(subDays(new Date(), 6), "yyyy-MM-dd"), to: today };
-      case "30d":
-        return { from: format(subDays(new Date(), 29), "yyyy-MM-dd"), to: today };
-      case "90d":
-        return { from: format(subDays(new Date(), 89), "yyyy-MM-dd"), to: today };
-      case "custom":
-        return { from: customFrom || undefined, to: customTo || undefined };
-      default:
-        return { from: undefined, to: undefined };
-    }
-  }, [preset, customFrom, customTo]);
 
   const data = useMemo(() => buildSeries(transactions, from, to), [transactions, from, to]);
 
@@ -104,47 +90,9 @@ export function CashFlowChart({ transactions }: { transactions: Transaction[] })
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-base">{t("cash_flow")}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("cash_flow_subtitle")}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(["7d", "30d", "90d", "all"] as const).map((p) => (
-              <Button
-                key={p}
-                size="xs"
-                variant={preset === p ? "secondary" : "ghost"}
-                onClick={() => setPreset(p)}
-                className="text-xs"
-              >
-                {t(p === "all" ? "range_all" : (`range_${p}` as const))}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom range pickers */}
-        <div className="flex items-center gap-2">
-          <DatePicker
-            value={customFrom}
-            onChange={(v) => {
-              setCustomFrom(v);
-              setPreset("custom");
-            }}
-            className="w-full"
-            placeholder={t("start_date")}
-          />
-          <DatePicker
-            value={customTo}
-            onChange={(v) => {
-              setCustomTo(v);
-              setPreset("custom");
-            }}
-            className="w-full"
-            placeholder={t("end_date")}
-          />
+        <div>
+          <CardTitle className="text-base">{t("cash_flow")}</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("cash_flow_subtitle")}</p>
         </div>
 
         {/* Series toggles */}

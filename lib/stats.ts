@@ -49,9 +49,9 @@ export function computeStatBlock(amounts: number[]): StatBlock {
   };
 }
 
-export function periodToStartDate(period: "7" | "30" | "all"): Date | null {
+export function periodToStartDate(period: "7" | "30" | "60" | "90" | "all"): Date | null {
   if (period === "all") return null;
-  const days = period === "7" ? 7 : 30;
+  const days = { "7": 7, "30": 30, "60": 60, "90": 90 }[period];
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() - (days - 1));

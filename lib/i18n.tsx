@@ -77,13 +77,14 @@ const dict = {
   eg_grocery_bill: { en: "e.g. Grocery shopping, Electricity bill…", th: "เช่น ค่าซื้อของใช้, ค่าไฟ…" },
   expense_category: { en: "Type of Expenses", th: "ประเภทของค่าใช้จ่าย" },
   select_category: { en: "Select category", th: "เลือกประเภท" },
-  category_entertainment: { en: "Entertainment", th: "ความบันเทิง" },
+  category_food_drinks: { en: "Food and drinks", th: "อาหารและเครื่องดื่ม" },
+  category_travel: { en: "Travel", th: "เดินทาง" },
+  category_education: { en: "Education", th: "การศึกษา" },
   category_shopping: { en: "Shopping", th: "ช้อปปิ้ง" },
-  category_investment_transport_recurring: {
-    en: "Investment / Transport / Recurring",
-    th: "ลงทุน ค่าเดินทาง ค่าใช้จ่ายประจำ",
-  },
-  category_basic_utilities: { en: "Basic Utilities", th: "สาธารณูปโภคขั้นพื้นฐาน" },
+  category_entertainment: { en: "Entertainment", th: "ความบันเทิง" },
+  category_recurring_expenses: { en: "Recurring expenses", th: "ค่าใช้จ่ายประจำ" },
+  category_health: { en: "Health", th: "สุขภาพ" },
+  category_social_gifts: { en: "Social and gifts", th: "สังคมและของขวัญ" },
   confirm_save: { en: "Confirm & Save", th: "ยืนยันและบันทึก" },
   saved: { en: "Saved!", th: "บันทึกแล้ว!" },
   upload_slips: { en: "Upload Bank Slips", th: "อัปโหลดสลิปธนาคาร" },
@@ -176,9 +177,17 @@ const dict = {
   admin_back_to_users: { en: "Back to users", th: "กลับไปหน้ารายชื่อผู้ใช้" },
   admin_last_7_days: { en: "Last 7 days", th: "7 วันล่าสุด" },
   admin_last_30_days: { en: "Last 30 days", th: "30 วันล่าสุด" },
+  admin_last_60_days: { en: "Last 60 days", th: "60 วันล่าสุด" },
+  admin_last_90_days: { en: "Last 90 days", th: "90 วันล่าสุด" },
+  admin_all_time: { en: "Lifetime", th: "ตลอดชีพ" },
   admin_custom_range: { en: "Custom range", th: "กำหนดช่วงเอง" },
   admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
   export_failed: { en: "Failed to export data", th: "ส่งออกข้อมูลไม่สำเร็จ" },
+  spending_rate: { en: "Spending Rate", th: "อัตราการใช้จ่าย" },
+  spending_rate_desc: {
+    en: "Expenses as a share of income for the selected period",
+    th: "สัดส่วนรายจ่ายต่อรายรับในช่วงเวลาที่เลือก",
+  },
 } as const;
 
 export type DictKey = keyof typeof dict;

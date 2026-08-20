@@ -67,19 +67,25 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
+    // Mongoose's enum validator rejects "" outright (only `undefined` counts as
+    // "unset"), so normalize a blank category before saving — otherwise income
+    // transactions, or expenses submitted without picking a category, fail.
+    const normalizedCategory = category ? category : undefined;
+
     const transaction = await Transaction.create({
       userId: session.userId,
       type,
       amount,
       date: parseDate(date),
       description: description ?? "",
-      category: category,
+      category: normalizedCategory,
     });
 
     return NextResponse.json({ transaction }, { status: 201 });
   } catch (error) {
     console.error("Create transaction error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

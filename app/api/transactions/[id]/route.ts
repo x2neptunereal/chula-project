@@ -31,9 +31,15 @@ export async function PUT(
 
     await connectDB();
 
+    // Mongoose's enum validator rejects "" outright (it only treats `undefined`
+    // as "unset"), so normalize any falsy/blank category to undefined here —
+    // otherwise editing an income transaction, or an expense whose category
+    // wasn't (re)selected, fails validation and the update 500s.
+    const normalizedCategory = category ? category : undefined;
+
     const transaction = await Transaction.findOneAndUpdate(
       { _id: id, userId: session.userId },
-      { type, amount, date: parseDate(date), description, category: category },
+      { type, amount, date: parseDate(date), description, category: normalizedCategory },
       { new: true, runValidators: true }
     );
 
@@ -44,7 +50,8 @@ export async function PUT(
     return NextResponse.json({ transaction });
   } catch (error) {
     console.error("Update transaction error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

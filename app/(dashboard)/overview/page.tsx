@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { format, parseISO } from "date-fns";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { format, parseISO, subDays } from "date-fns";
 import {
   IconTrendingUp,
   IconTrendingDown,
@@ -14,11 +14,16 @@ import {
   IconX,
   IconCheck,
   IconSearch,
+  IconSaladFilled,
+  IconCarFilled,
+  IconBallpenFilled,
   IconShoppingCartFilled,
   IconDeviceGamepad2Filled,
   IconReceiptFilled,
-  IconBulbFilled,
+  IconHeartFilled,
+  IconGiftFilled,
   IconDownload,
+  IconPercentage,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +76,7 @@ function SummaryCard({
   isBalance?: boolean;
 }) {
   return (
-    <Card>
+    <Card className="gap-2">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -80,7 +85,7 @@ function SummaryCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-3">
+      <CardContent>
         {loading ? (
           <Skeleton className="h-8 w-36" />
         ) : (
@@ -116,14 +121,32 @@ export default function OverviewPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
-  // Export state
-  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "custom">("30");
+  // Summary range state — drives the stat cards, the chart, and the export
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "90" | "all" | "custom">("all");
   const [exportStart, setExportStart] = useState("");
   const [exportEnd, setExportEnd] = useState("");
   const [exporting, setExporting] = useState(false);
 
   const exportRangeValid = !!exportStart && !!exportEnd && exportStart <= exportEnd;
   const exportDisabled = exporting || (exportPeriod === "custom" && !exportRangeValid);
+
+  // Resolve the summary range to concrete yyyy-MM-dd bounds
+  const { summaryFrom, summaryTo } = useMemo(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    if (exportPeriod === "custom") {
+      return exportRangeValid
+        ? { summaryFrom: exportStart, summaryTo: exportEnd }
+        : { summaryFrom: undefined, summaryTo: undefined };
+    }
+    if (exportPeriod === "all") {
+      return { summaryFrom: undefined, summaryTo: today };
+    }
+    const days = { "7": 6, "30": 29, "60": 59, "90": 89 }[exportPeriod];
+    return {
+      summaryFrom: format(subDays(new Date(), days), "yyyy-MM-dd"),
+      summaryTo: today,
+    };
+  }, [exportPeriod, exportStart, exportEnd, exportRangeValid]);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -147,16 +170,6 @@ export default function OverviewPage() {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
-  const balance = totalIncome - totalExpenses;
-
-  // Use all transactions for summary (no filter), but we only have filtered ones
-  // Refetch all for summary separately if filters are active
   const hasFilter = typeFilter !== "all" || !!dateFrom || !!dateTo || !!search;
 
   const filteredTransactions = transactions.filter((tx) => {
@@ -168,22 +181,33 @@ export default function OverviewPage() {
     );
   });
 
-  // For summary + chart, always pull the full unfiltered transaction list separately
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  // For summary cards + chart: pull transactions scoped to the summary range
+  // (same range used by the Export control) separately from the list filters.
+  const [summaryTransactions, setSummaryTransactions] = useState<Transaction[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/transactions")
+    if (exportPeriod === "custom" && !exportRangeValid) return;
+    setSummaryLoading(true);
+    const params = new URLSearchParams();
+    if (summaryFrom) params.set("dateFrom", summaryFrom);
+    if (summaryTo) params.set("dateTo", summaryTo);
+    fetch(`/api/transactions?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setAllTransactions(d.transactions ?? []);
+        setSummaryTransactions(d.transactions ?? []);
       })
-      .catch(() => { });
-  }, [transactions]); // refresh when list changes
+      .catch(() => { })
+      .finally(() => setSummaryLoading(false));
+  }, [summaryFrom, summaryTo, exportPeriod, exportRangeValid, transactions]); // refresh when list changes
 
-  const allTotals = {
-    income: allTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-    expenses: allTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+  const summaryTotals = {
+    income: summaryTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+    expenses: summaryTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
   };
+
+  const spendingRate =
+    summaryTotals.income > 0 ? (summaryTotals.expenses / summaryTotals.income) * 100 : 0;
 
   async function handleDelete(id: string) {
     try {
@@ -297,12 +321,15 @@ export default function OverviewPage() {
           category: editForm.type === "expense" ? editForm.category : undefined,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.error || "Request failed");
+      }
       toast.success(t("tx_updated"));
       setEditTx(null);
       fetchTransactions();
-    } catch {
-      toast.error(t("tx_update_failed"));
+    } catch (err) {
+      toast.error(err instanceof Error && err.message ? err.message : t("tx_update_failed"));
     } finally {
       setEditLoading(false);
     }
@@ -324,13 +351,19 @@ export default function OverviewPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={exportPeriod} onValueChange={(v) => setExportPeriod(v as "7" | "30" | "custom")}>
+          <Select
+            value={exportPeriod}
+            onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "90" | "all" | "custom")}
+          >
             <SelectTrigger className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
               <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
+              <SelectItem value="60">{t("admin_last_60_days")}</SelectItem>
+              <SelectItem value="90">{t("admin_last_90_days")}</SelectItem>
+              <SelectItem value="all">{t("admin_all_time")}</SelectItem>
               <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
             </SelectContent>
           </Select>
@@ -359,34 +392,61 @@ export default function OverviewPage() {
         </div>
       </div>
 
+      {/* Spending rate */}
+      <Card className="gap-2">
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t("spending_rate")}
+            </CardTitle>
+            <div className="flex size-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+              <IconPercentage className="size-4" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {summaryLoading ? (
+            <Skeleton className="h-8 w-24" />
+          ) : (
+            <span
+              className={`text-2xl font-bold tracking-tight ${spendingRate > 100 ? "text-rose-600 dark:text-rose-400" : ""
+                }`}
+            >
+              {spendingRate.toFixed(1)}%
+            </span>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">{t("spending_rate_desc")}</p>
+        </CardContent>
+      </Card>
+
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
           title={t("total_income")}
-          amount={allTotals.income}
+          amount={summaryTotals.income}
           icon={IconTrendingUp}
           colorClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-          loading={loading}
+          loading={summaryLoading}
         />
         <SummaryCard
           title={t("total_expenses")}
-          amount={allTotals.expenses}
+          amount={summaryTotals.expenses}
           icon={IconTrendingDown}
           colorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
-          loading={loading}
+          loading={summaryLoading}
         />
         <SummaryCard
           title={t("balance")}
-          amount={allTotals.income - allTotals.expenses}
+          amount={summaryTotals.income - summaryTotals.expenses}
           icon={IconMathAvg}
           colorClass="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-          loading={loading}
+          loading={summaryLoading}
           isBalance
         />
       </div>
 
       {/* Cash flow chart */}
-      <CashFlowChart transactions={allTransactions} />
+      <CashFlowChart transactions={summaryTransactions} from={summaryFrom} to={summaryTo} />
 
       {/* Transaction list */}
       <Card>
@@ -524,14 +584,22 @@ export default function OverviewPage() {
                     ) : (
                       (() => {
                         switch (tx.category) {
-                          case "entertainment":
-                            return <IconDeviceGamepad2Filled className="size-4" />;
+                          case "food_drinks":
+                            return <IconSaladFilled className="size-4" />;
+                          case "travel":
+                            return <IconCarFilled className="size-4" />;
+                          case "education":
+                            return <IconBallpenFilled className="size-4" />;
                           case "shopping":
                             return <IconShoppingCartFilled className="size-4" />;
-                          case "investment_transport_recurring":
+                          case "entertainment":
+                            return <IconDeviceGamepad2Filled className="size-4" />;
+                          case "recurring_expenses":
                             return <IconReceiptFilled className="size-4" />;
-                          case "basic_utilities":
-                            return <IconBulbFilled className="size-4" />;
+                          case "health":
+                            return <IconHeartFilled className="size-4" />;
+                          case "social_gifts":
+                            return <IconGiftFilled className="size-4" />;
                           default:
                             return <IconTrendingDown className="size-4" />;
                         }

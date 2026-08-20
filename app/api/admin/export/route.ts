@@ -29,10 +29,14 @@ function statBlockLines(label: string, s: StatBlock): string[] {
 }
 
 const CATEGORY_TH: Record<string, string> = {
-  entertainment: "ความบันเทิง",
+  food_drinks: "อาหารและเครื่องดื่ม",
+  travel: "เดินทาง",
+  education: "การศึกษา",
   shopping: "ช้อปปิ้ง",
-  investment_transport_recurring: "ลงทุน/เดินทาง/ค่าใช้จ่ายประจำ",
-  basic_utilities: "สาธารณูปโภคขั้นพื้นฐาน",
+  entertainment: "ความบันเทิง",
+  recurring_expenses: "ค่าใช้จ่ายประจำ",
+  health: "สุขภาพ",
+  social_gifts: "สังคมและของขวัญ",
 };
 
 /**
