@@ -221,7 +221,8 @@ export default function AdminPage() {
             )
           : today;
     } else {
-      const days = { "7": 6, "30": 29, "60": 59, "90": 89 }[exportPeriod] ?? 29;
+      const dayOffsets: Record<string, number> = { "7": 6, "30": 29, "60": 59, "90": 89 };
+      const days = dayOffsets[exportPeriod] ?? 29;
       toDate = today;
       fromDate = new Date(today);
       fromDate.setDate(fromDate.getDate() - days);
