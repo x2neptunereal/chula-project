@@ -183,11 +183,39 @@ const dict = {
   admin_custom_range: { en: "Custom range", th: "กำหนดช่วงเอง" },
   admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
   export_failed: { en: "Failed to export data", th: "ส่งออกข้อมูลไม่สำเร็จ" },
-  spending_rate: { en: "Spending Rate", th: "อัตราการใช้จ่าย" },
+  spending_rate: { en: "Budget Utilization", th: "อัตราการใช้จ่าย" },
   spending_rate_desc: {
     en: "Expenses as a share of income for the selected period",
     th: "สัดส่วนรายจ่ายต่อรายรับในช่วงเวลาที่เลือก",
   },
+
+  // Risk score
+  risk_score: { en: "Risk Score", th: "คะแนนความเสี่ยง" },
+  risk_low: { en: "Low", th: "ต่ำ" },
+  risk_medium: { en: "Medium", th: "ปานกลาง" },
+  risk_high: { en: "High", th: "สูง" },
+  risk_very_high: { en: "Very High", th: "สูงมาก" },
+  risk_desc_low: {
+    en: "Spending behavior is relatively low risk.",
+    th: "พฤติกรรมการใช้จ่ายมีความเสี่ยงค่อนข้างต่ำ",
+  },
+  risk_desc_medium: {
+    en: "Not yet severe, but should be monitored.",
+    th: "ยังไม่รุนแรง แต่ควรเฝ้าระวัง",
+  },
+  risk_desc_high: {
+    en: "Behavior that requires monitoring.",
+    th: "พฤติกรรมที่ต้องเฝ้าระวัง",
+  },
+  risk_desc_very_high: {
+    en: "Clear signs of risk.",
+    th: "มีสัญญาณความเสี่ยงชัดเจน",
+  },
+  admin_expense_per_day: { en: "Expense per Day", th: "รายจ่ายต่อวัน" },
+  admin_transaction_frequency: { en: "Transaction Frequency", th: "ความถี่ของรายการ" },
+  admin_largest_transaction_ratio: { en: "Largest Transaction Ratio", th: "สัดส่วนรายการที่ใหญ่ที่สุด" },
+  admin_category_concentration: { en: "Category Concentration", th: "ความเข้มข้นของหมวดหมู่" },
+  admin_budget_utilization_risk: { en: "Budget Utilization & Risk Score", th: "อัตราการใช้จ่ายและคะแนนความเสี่ยง" },
 } as const;
 
 export type DictKey = keyof typeof dict;

@@ -24,6 +24,7 @@ import {
   IconGiftFilled,
   IconDownload,
   IconPercentage,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +47,7 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { EXPENSE_CATEGORIES, CATEGORY_LABEL_KEYS, type ExpenseCategory } from "@/lib/expense-categories";
+import { computeRiskScore } from "@/lib/risk-score";
 
 interface Transaction {
   _id: string;
@@ -96,6 +98,29 @@ function SummaryCard({
             {formatCurrency(amount)}
           </span>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricPill({
+  title,
+  value,
+  loading,
+}: {
+  title: string;
+  value: string;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="gap-2">
+      <CardHeader className="pb-0">
+        <CardTitle className="text-sm font-medium text-muted-foreground leading-tight min-h-9 flex items-start">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-7 w-20" /> : <span className="text-xl font-bold tracking-tight">{value}</span>}
       </CardContent>
     </Card>
   );
@@ -208,6 +233,50 @@ export default function OverviewPage() {
 
   const spendingRate =
     summaryTotals.income > 0 ? (summaryTotals.expenses / summaryTotals.income) * 100 : 0;
+
+  // Risk Score — same summary range as the stat cards / chart / export.
+  // "all time" has no explicit lower bound, so fall back to the earliest
+  // transaction in the set (or today, if there are none) as the range start.
+  const riskScore = useMemo(() => {
+    const toDate = summaryTo ? new Date(summaryTo) : new Date();
+    let fromDate: Date;
+    if (summaryFrom) {
+      fromDate = new Date(summaryFrom);
+    } else if (summaryTransactions.length > 0) {
+      fromDate = summaryTransactions.reduce(
+        (earliest, tx) => (new Date(tx.date) < earliest ? new Date(tx.date) : earliest),
+        new Date(summaryTransactions[0].date)
+      );
+    } else {
+      fromDate = toDate;
+    }
+    return computeRiskScore(summaryTransactions, fromDate, toDate);
+  }, [summaryTransactions, summaryFrom, summaryTo]);
+
+  const riskLevelLabel: Record<typeof riskScore.level, string> = {
+    low: t("risk_low"),
+    medium: t("risk_medium"),
+    high: t("risk_high"),
+    very_high: t("risk_very_high"),
+  };
+  const riskLevelColorClass: Record<typeof riskScore.level, string> = {
+    low: "text-emerald-600 dark:text-emerald-400",
+    medium: "text-amber-600 dark:text-amber-400",
+    high: "text-orange-600 dark:text-orange-400",
+    very_high: "text-rose-600 dark:text-rose-400",
+  };
+  const riskLevelBadgeClass: Record<typeof riskScore.level, string> = {
+    low: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+    medium: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+    high: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+    very_high: "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
+  };
+  const riskLevelDesc: Record<typeof riskScore.level, string> = {
+    low: t("risk_desc_low"),
+    medium: t("risk_desc_medium"),
+    high: t("risk_desc_high"),
+    very_high: t("risk_desc_very_high"),
+  };
 
   async function handleDelete(id: string) {
     try {
@@ -392,33 +461,6 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Spending rate */}
-      <Card className="gap-2">
-        <CardHeader className="pb-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("spending_rate")}
-            </CardTitle>
-            <div className="flex size-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-              <IconPercentage className="size-4" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {summaryLoading ? (
-            <Skeleton className="h-8 w-24" />
-          ) : (
-            <span
-              className={`text-2xl font-bold tracking-tight ${spendingRate > 100 ? "text-rose-600 dark:text-rose-400" : ""
-                }`}
-            >
-              {spendingRate.toFixed(1)}%
-            </span>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">{t("spending_rate_desc")}</p>
-        </CardContent>
-      </Card>
-
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
@@ -444,6 +486,95 @@ export default function OverviewPage() {
           isBalance
         />
       </div>
+
+      {/* Budget Utilization & Risk Score */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("admin_budget_utilization_risk")}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="gap-2">
+              <CardHeader className="pb-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {t("spending_rate")}
+                  </CardTitle>
+                  <div className="flex size-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                    <IconPercentage className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {summaryLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <span
+                    className={`text-2xl font-bold tracking-tight ${spendingRate > 100 ? "text-rose-600 dark:text-rose-400" : ""
+                      }`}
+                  >
+                    {spendingRate.toFixed(1)}%
+                  </span>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">{t("spending_rate_desc")}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="gap-2">
+              <CardHeader className="pb-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {t("risk_score")}
+                  </CardTitle>
+                  <div className={`flex size-8 items-center justify-center rounded-xl ${riskLevelBadgeClass[riskScore.level]}`}>
+                    <IconAlertTriangle className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {summaryLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-2xl font-bold tracking-tight ${riskLevelColorClass[riskScore.level]}`}>
+                      {riskScore.riskScore.toFixed(1)}
+                    </span>
+                    <Badge variant="outline" className={`${riskLevelBadgeClass[riskScore.level]} border-0`}>
+                      {riskLevelLabel[riskScore.level]}
+                    </Badge>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {riskLevelDesc[riskScore.level]}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <MetricPill
+              title={t("admin_expense_per_day")}
+              value={formatCurrency(riskScore.metrics.expensePerDay)}
+              loading={summaryLoading}
+            />
+            <MetricPill
+              title={t("admin_transaction_frequency")}
+              value={riskScore.metrics.transactionFrequency.toFixed(2)}
+              loading={summaryLoading}
+            />
+            <MetricPill
+              title={t("admin_largest_transaction_ratio")}
+              value={`${riskScore.metrics.largestTransactionRatio.toFixed(1)}%`}
+              loading={summaryLoading}
+            />
+            <MetricPill
+              title={t("admin_category_concentration")}
+              value={`${riskScore.metrics.categoryConcentration.toFixed(1)}%`}
+              loading={summaryLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cash flow chart */}
       <CashFlowChart transactions={summaryTransactions} from={summaryFrom} to={summaryTo} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconUsersGroup,
@@ -12,14 +12,18 @@ import {
   IconArrowLeft,
   IconCalendar,
   IconShieldLock,
+  IconPercentage,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useLanguage } from "@/lib/i18n";
 import { isAdminEmail } from "@/lib/admin";
+import { computeRiskScore } from "@/lib/risk-score";
 
 interface UserSummary {
   id: string;
@@ -50,14 +54,16 @@ function StatPill({
   amount,
   icon: Icon,
   colorClass,
+  loading,
 }: {
   title: string;
   amount: number;
   icon: React.ElementType;
   colorClass: string;
+  loading?: boolean;
 }) {
   return (
-    <Card>
+    <Card className="gap-2">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -66,8 +72,35 @@ function StatPill({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-3">
-        <span className="text-2xl font-bold tracking-tight">{formatCurrency(amount)}</span>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-36" />
+        ) : (
+          <span className="text-2xl font-bold tracking-tight">{formatCurrency(amount)}</span>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricPill({
+  title,
+  value,
+  loading,
+}: {
+  title: string;
+  value: string;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="gap-2">
+      <CardHeader className="pb-0">
+        <CardTitle className="text-sm font-medium text-muted-foreground leading-tight min-h-9 flex items-start">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-7 w-20" /> : <span className="text-xl font-bold tracking-tight">{value}</span>}
       </CardContent>
     </Card>
   );
@@ -87,7 +120,7 @@ export default function AdminPage() {
   const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "custom">("30");
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "90" | "all" | "custom">("30");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -126,17 +159,100 @@ export default function AdminPage() {
     if (allowed) fetchUsers();
   }, [allowed, fetchUsers]);
 
-  const openUser = useCallback(async (u: UserSummary) => {
+  const openUser = useCallback((u: UserSummary) => {
     setSelectedUser(u);
-    setDetailLoading(true);
-    try {
-      const res = await fetch(`/api/admin/user-detail?userId=${u.id}&period=all`);
-      const data = await res.json();
-      setDetailTransactions(data.transactions ?? []);
-    } finally {
-      setDetailLoading(false);
-    }
   }, []);
+
+  // Re-fetch the selected user's transactions whenever the period selector
+  // (the same dropdown that drives the export) changes, so the displayed
+  // stats — including Budget Utilization & Risk Score — track the chosen range.
+  useEffect(() => {
+    if (!selectedUser) return;
+    if (exportPeriod === "custom" && !customRangeValid) return;
+
+    let cancelled = false;
+    setDetailLoading(true);
+    const params = new URLSearchParams({ userId: selectedUser.id, period: exportPeriod });
+    if (exportPeriod === "custom") {
+      params.set("startDate", customStart);
+      params.set("endDate", customEnd);
+    }
+    fetch(`/api/admin/user-detail?${params}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setDetailTransactions(data.transactions ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setDetailTransactions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUser, exportPeriod, customStart, customEnd, customRangeValid]);
+
+  const detailTotals = useMemo(() => {
+    const income = detailTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const expenses = detailTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    return { income, expenses };
+  }, [detailTransactions]);
+
+  const spendingRate =
+    detailTotals.income > 0 ? (detailTotals.expenses / detailTotals.income) * 100 : 0;
+
+  // Risk Score for the selected user, over the selected period range.
+  const riskScore = useMemo(() => {
+    const today = new Date();
+    let fromDate: Date;
+    let toDate: Date;
+    if (exportPeriod === "custom" && customRangeValid) {
+      fromDate = new Date(customStart);
+      toDate = new Date(customEnd);
+    } else if (exportPeriod === "all") {
+      toDate = today;
+      fromDate =
+        detailTransactions.length > 0
+          ? detailTransactions.reduce(
+              (earliest, tx) => (new Date(tx.date) < earliest ? new Date(tx.date) : earliest),
+              new Date(detailTransactions[0].date)
+            )
+          : today;
+    } else {
+      const days = { "7": 6, "30": 29, "60": 59, "90": 89 }[exportPeriod] ?? 29;
+      toDate = today;
+      fromDate = new Date(today);
+      fromDate.setDate(fromDate.getDate() - days);
+    }
+    return computeRiskScore(detailTransactions, fromDate, toDate);
+  }, [detailTransactions, exportPeriod, customStart, customEnd, customRangeValid]);
+
+  const riskLevelLabel: Record<typeof riskScore.level, string> = {
+    low: t("risk_low"),
+    medium: t("risk_medium"),
+    high: t("risk_high"),
+    very_high: t("risk_very_high"),
+  };
+  const riskLevelColorClass: Record<typeof riskScore.level, string> = {
+    low: "text-emerald-600 dark:text-emerald-400",
+    medium: "text-amber-600 dark:text-amber-400",
+    high: "text-orange-600 dark:text-orange-400",
+    very_high: "text-rose-600 dark:text-rose-400",
+  };
+  const riskLevelBadgeClass: Record<typeof riskScore.level, string> = {
+    low: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+    medium: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+    high: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+    very_high: "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
+  };
+  const riskLevelDesc: Record<typeof riskScore.level, string> = {
+    low: t("risk_desc_low"),
+    medium: t("risk_desc_medium"),
+    high: t("risk_desc_high"),
+    very_high: t("risk_desc_very_high"),
+  };
 
   async function handleExport() {
     if (!selectedUser) return;
@@ -241,13 +357,19 @@ export default function AdminPage() {
             </Button>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <Select value={exportPeriod} onValueChange={(v) => setExportPeriod(v as "7" | "30" | "custom")}>
+              <Select
+                value={exportPeriod}
+                onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "90" | "all" | "custom")}
+              >
                 <SelectTrigger className="w-36">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
                   <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
+                  <SelectItem value="60">{t("admin_last_60_days")}</SelectItem>
+                  <SelectItem value="90">{t("admin_last_90_days")}</SelectItem>
+                  <SelectItem value="all">{t("admin_all_time")}</SelectItem>
                   <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
                 </SelectContent>
               </Select>
@@ -284,23 +406,113 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatPill
               title={t("total_income")}
-              amount={selectedUser.totalIncome}
+              amount={detailTotals.income}
               icon={IconTrendingUp}
               colorClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+              loading={detailLoading}
             />
             <StatPill
               title={t("total_expenses")}
-              amount={selectedUser.totalExpense}
+              amount={detailTotals.expenses}
               icon={IconTrendingDown}
               colorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
+              loading={detailLoading}
             />
             <StatPill
               title={t("balance")}
-              amount={selectedUser.balance}
+              amount={detailTotals.income - detailTotals.expenses}
               icon={IconMathAvg}
               colorClass="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+              loading={detailLoading}
             />
           </div>
+
+          {/* Budget Utilization & Risk Score */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t("admin_budget_utilization_risk")}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="gap-2">
+                  <CardHeader className="pb-0">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {t("spending_rate")}
+                      </CardTitle>
+                      <div className="flex size-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                        <IconPercentage className="size-4" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {detailLoading ? (
+                      <Skeleton className="h-8 w-24" />
+                    ) : (
+                      <span
+                        className={`text-2xl font-bold tracking-tight ${spendingRate > 100 ? "text-rose-600 dark:text-rose-400" : ""
+                          }`}
+                      >
+                        {spendingRate.toFixed(1)}%
+                      </span>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">{t("spending_rate_desc")}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="gap-2">
+                  <CardHeader className="pb-0">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {t("risk_score")}
+                      </CardTitle>
+                      <div className={`flex size-8 items-center justify-center rounded-xl ${riskLevelBadgeClass[riskScore.level]}`}>
+                        <IconAlertTriangle className="size-4" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {detailLoading ? (
+                      <Skeleton className="h-8 w-24" />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-2xl font-bold tracking-tight ${riskLevelColorClass[riskScore.level]}`}>
+                          {riskScore.riskScore.toFixed(1)}
+                        </span>
+                        <Badge variant="outline" className={`${riskLevelBadgeClass[riskScore.level]} border-0`}>
+                          {riskLevelLabel[riskScore.level]}
+                        </Badge>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">{riskLevelDesc[riskScore.level]}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <MetricPill
+                  title={t("admin_expense_per_day")}
+                  value={formatCurrency(riskScore.metrics.expensePerDay)}
+                  loading={detailLoading}
+                />
+                <MetricPill
+                  title={t("admin_transaction_frequency")}
+                  value={riskScore.metrics.transactionFrequency.toFixed(2)}
+                  loading={detailLoading}
+                />
+                <MetricPill
+                  title={t("admin_largest_transaction_ratio")}
+                  value={`${riskScore.metrics.largestTransactionRatio.toFixed(1)}%`}
+                  loading={detailLoading}
+                />
+                <MetricPill
+                  title={t("admin_category_concentration")}
+                  value={`${riskScore.metrics.categoryConcentration.toFixed(1)}%`}
+                  loading={detailLoading}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

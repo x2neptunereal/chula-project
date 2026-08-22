@@ -4,8 +4,9 @@ import Transaction from "@/lib/models/Transaction";
 import User from "@/lib/models/User";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
+import { periodToStartDate } from "@/lib/stats";
 
-/** GET /api/admin/user-detail?userId=...&period=7|30|all — admin only. */
+/** GET /api/admin/user-detail?userId=...&period=7|30|60|90|all — admin only. */
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!isAdmin(session)) {
@@ -14,7 +15,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
-  const period = (searchParams.get("period") ?? "all") as "7" | "30" | "all";
+  const period = (searchParams.get("period") ?? "all") as "7" | "30" | "60" | "90" | "all";
+  const startDateParam = searchParams.get("startDate");
+  const endDateParam = searchParams.get("endDate");
 
   if (!userId) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -29,12 +32,15 @@ export async function GET(request: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const filter: Record<string, any> = { userId };
-  if (period !== "all") {
-    const days = period === "7" ? 7 : 30;
-    const start = new Date();
+  if (startDateParam && endDateParam) {
+    const start = new Date(startDateParam);
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - (days - 1));
-    filter.date = { $gte: start };
+    const end = new Date(endDateParam);
+    end.setHours(23, 59, 59, 999);
+    filter.date = { $gte: start, $lte: end };
+  } else {
+    const start = periodToStartDate(period);
+    if (start) filter.date = { $gte: start };
   }
 
   const transactions = await Transaction.find(filter).sort({ date: -1 }).lean();
