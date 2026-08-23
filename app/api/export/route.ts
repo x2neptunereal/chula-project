@@ -39,7 +39,7 @@ const CATEGORY_TH: Record<string, string> = {
 };
 
 /**
- * GET /api/export?period=7|30|60|90|all|custom
+ * GET /api/export?period=7|30|60|all|custom
  * When period=custom, also requires startDate=yyyy-MM-dd&endDate=yyyy-MM-dd.
  * Self-service export — returns a plain .txt report for the signed-in user's own data.
  */
@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
     periodLabel = "All time";
     fileTag = "all";
   } else {
-    const period = (["7", "30", "60", "90"] as const).includes(periodParam as "7" | "30" | "60" | "90")
-      ? (periodParam as "7" | "30" | "60" | "90")
+    const period = (["7", "30", "60"] as const).includes(periodParam as "7" | "30" | "60")
+      ? (periodParam as "7" | "30" | "60")
       : "30"; // default 30
     startDate = periodToStartDate(period);
     endDate = new Date();

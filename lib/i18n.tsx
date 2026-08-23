@@ -178,7 +178,6 @@ const dict = {
   admin_last_7_days: { en: "Last 7 days", th: "7 วันล่าสุด" },
   admin_last_30_days: { en: "Last 30 days", th: "30 วันล่าสุด" },
   admin_last_60_days: { en: "Last 60 days", th: "60 วันล่าสุด" },
-  admin_last_90_days: { en: "Last 90 days", th: "90 วันล่าสุด" },
   admin_all_time: { en: "Lifetime", th: "ตลอดชีพ" },
   admin_custom_range: { en: "Custom range", th: "กำหนดช่วงเอง" },
   admin_export_txt: { en: "Export .txt", th: "ส่งออก .txt" },
@@ -216,6 +215,54 @@ const dict = {
   admin_largest_transaction_ratio: { en: "Largest Transaction Ratio", th: "สัดส่วนรายการที่ใหญ่ที่สุด" },
   admin_category_concentration: { en: "Category Concentration", th: "ความเข้มข้นของหมวดหมู่" },
   admin_budget_utilization_risk: { en: "Budget Utilization & Risk Score", th: "อัตราการใช้จ่ายและคะแนนความเสี่ยง" },
+
+  // Recommendation lookup (Budget Utilization tier x Risk level)
+  recommendation_label: { en: "Recommendation", th: "คำแนะนำ" },
+  rec_budget_low_risk_low_status: { en: "Very good", th: "ดีมาก" },
+  rec_budget_low_risk_low_advice: {
+    en: "Spending is low and low risk. Keep up the good habits and set aside some money for savings.",
+    th: "การใช้เงินอยู่ในระดับต่ำและมีความเสี่ยงน้อย ควรรักษาพฤติกรรมและแบ่งเงินส่วนหนึ่งไว้สำหรับออม",
+  },
+  rec_budget_low_risk_medhigh_status: { en: "Budget is fine, but behavior needs caution", th: "งบยังดี แต่พฤติกรรมควรระวัง" },
+  rec_budget_low_risk_medhigh_advice: {
+    en: "Even though spending is low, some risky patterns were found, such as frequent small purchases or large one-off buys. Keep track of your spending pattern.",
+    th: "แม้ใช้เงินไม่มาก แต่พบพฤติกรรมบางอย่าง เช่น ใช้จ่ายถี่หรือซื้อก้อนใหญ่ ควรติดตามรูปแบบการใช้เงิน",
+  },
+  rec_budget_mid_risk_low_status: { en: "In good standing", th: "อยู่ในเกณฑ์ดี" },
+  rec_budget_mid_risk_low_advice: {
+    en: "Budget is still well controlled. You can keep spending as planned and maintain your reserves.",
+    th: "ยังควบคุมงบได้ดี สามารถใช้เงินต่อได้ตามแผนและรักษาเงินสำรอง",
+  },
+  rec_budget_mid_risk_medium_status: { en: "Should monitor", th: "ควรติดตาม" },
+  rec_budget_mid_risk_medium_advice: {
+    en: "Budget isn't close to running out yet, but risky patterns are starting to appear. Reduce unnecessary transactions.",
+    th: "งบยังไม่ใกล้หมด แต่เริ่มพบพฤติกรรมเสี่ยง ควรลดรายการที่ไม่จำเป็น",
+  },
+  rec_budget_mid_risk_highvhigh_status: { en: "Should watch closely", th: "ควรเฝ้าระวัง" },
+  rec_budget_mid_risk_highvhigh_advice: {
+    en: "Not over budget yet, but the spending pattern carries high risk. Review how often and in which categories you're spending most.",
+    th: "แม้ยังไม่เกินงบ แต่รูปแบบการใช้จ่ายมีความเสี่ยงสูง ควรตรวจสอบความถี่และหมวดที่ใช้เงินมาก",
+  },
+  rec_budget_near_risk_low_status: { en: "Near budget limit", th: "ใกล้งบ" },
+  rec_budget_near_risk_low_advice: {
+    en: "Budget is nearly used up. Only spend on what's necessary from here on.",
+    th: "ใช้งบไปเกือบหมดแล้ว ควรใช้เฉพาะค่าใช้จ่ายที่จำเป็น",
+  },
+  rec_budget_near_risk_medium_status: { en: "At risk of going over budget", th: "เสี่ยงใกล้เกินงบ" },
+  rec_budget_near_risk_medium_advice: {
+    en: "Cut back on unnecessary expenses and set a limit for the remaining budget.",
+    th: "ควรลดค่าใช้จ่ายที่ไม่จำเป็นและกำหนดวงเงินสำหรับเงินที่เหลือ",
+  },
+  rec_budget_near_risk_highvhigh_status: { en: "High risk of exceeding budget", th: "เสี่ยงเกินงบสูง" },
+  rec_budget_near_risk_highvhigh_advice: {
+    en: "Stop or reduce unnecessary spending immediately and plan clearly for the funds you have left.",
+    th: "ควรหยุดหรือลดรายจ่ายที่ไม่จำเป็นทันที และวางแผนเงินที่เหลืออย่างชัดเจน",
+  },
+  rec_budget_over_status: { en: "Over budget", th: "เกินงบแล้ว" },
+  rec_budget_over_advice: {
+    en: "Expenses have exceeded the budget. Review the transactions that caused the overspend, cut unneeded spending, and adjust your plan for the rest of the period.",
+    th: "รายจ่ายเกินงบแล้ว ควรตรวจสอบรายการที่ทำให้งบเกิน ลดรายจ่ายที่ไม่จำเป็น และปรับแผนสำหรับช่วงเวลาที่เหลือ",
+  },
 } as const;
 
 export type DictKey = keyof typeof dict;

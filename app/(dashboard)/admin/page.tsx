@@ -120,7 +120,7 @@ export default function AdminPage() {
   const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "90" | "all" | "custom">("30");
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all" | "custom">("30");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -221,7 +221,7 @@ export default function AdminPage() {
             )
           : today;
     } else {
-      const dayOffsets: Record<string, number> = { "7": 6, "30": 29, "60": 59, "90": 89 };
+      const dayOffsets: Record<string, number> = { "7": 6, "30": 29, "60": 59 };
       const days = dayOffsets[exportPeriod] ?? 29;
       toDate = today;
       fromDate = new Date(today);
@@ -360,7 +360,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <Select
                 value={exportPeriod}
-                onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "90" | "all" | "custom")}
+                onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "all" | "custom")}
               >
                 <SelectTrigger className="w-36">
                   <SelectValue />
@@ -369,7 +369,6 @@ export default function AdminPage() {
                   <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
                   <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
                   <SelectItem value="60">{t("admin_last_60_days")}</SelectItem>
-                  <SelectItem value="90">{t("admin_last_90_days")}</SelectItem>
                   <SelectItem value="all">{t("admin_all_time")}</SelectItem>
                   <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
                 </SelectContent>

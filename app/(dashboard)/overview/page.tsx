@@ -47,7 +47,7 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { EXPENSE_CATEGORIES, CATEGORY_LABEL_KEYS, type ExpenseCategory } from "@/lib/expense-categories";
-import { computeRiskScore } from "@/lib/risk-score";
+import { computeRiskScore, getRecommendationKey, type RecommendationKey } from "@/lib/risk-score";
 
 interface Transaction {
   _id: string;
@@ -147,7 +147,7 @@ export default function OverviewPage() {
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
   // Summary range state — drives the stat cards, the chart, and the export
-  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "90" | "all" | "custom">("all");
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all" | "custom">("all");
   const [exportStart, setExportStart] = useState("");
   const [exportEnd, setExportEnd] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -166,7 +166,7 @@ export default function OverviewPage() {
     if (exportPeriod === "all") {
       return { summaryFrom: undefined, summaryTo: today };
     }
-    const days = { "7": 6, "30": 29, "60": 59, "90": 89 }[exportPeriod];
+    const days = { "7": 6, "30": 29, "60": 59 }[exportPeriod];
     return {
       summaryFrom: format(subDays(new Date(), days), "yyyy-MM-dd"),
       summaryTo: today,
@@ -277,6 +277,20 @@ export default function OverviewPage() {
     high: t("risk_desc_high"),
     very_high: t("risk_desc_very_high"),
   };
+
+  const recommendationCopy: Record<RecommendationKey, { status: string; advice: string }> = {
+    budget_low_risk_low: { status: t("rec_budget_low_risk_low_status"), advice: t("rec_budget_low_risk_low_advice") },
+    budget_low_risk_medhigh: { status: t("rec_budget_low_risk_medhigh_status"), advice: t("rec_budget_low_risk_medhigh_advice") },
+    budget_mid_risk_low: { status: t("rec_budget_mid_risk_low_status"), advice: t("rec_budget_mid_risk_low_advice") },
+    budget_mid_risk_medium: { status: t("rec_budget_mid_risk_medium_status"), advice: t("rec_budget_mid_risk_medium_advice") },
+    budget_mid_risk_highvhigh: { status: t("rec_budget_mid_risk_highvhigh_status"), advice: t("rec_budget_mid_risk_highvhigh_advice") },
+    budget_near_risk_low: { status: t("rec_budget_near_risk_low_status"), advice: t("rec_budget_near_risk_low_advice") },
+    budget_near_risk_medium: { status: t("rec_budget_near_risk_medium_status"), advice: t("rec_budget_near_risk_medium_advice") },
+    budget_near_risk_highvhigh: { status: t("rec_budget_near_risk_highvhigh_status"), advice: t("rec_budget_near_risk_highvhigh_advice") },
+    budget_over: { status: t("rec_budget_over_status"), advice: t("rec_budget_over_advice") },
+  };
+  const recommendationKey = getRecommendationKey(riskScore.metrics.budgetUtilization, riskScore.level);
+  const recommendation = recommendationCopy[recommendationKey];
 
   async function handleDelete(id: string) {
     try {
@@ -422,7 +436,7 @@ export default function OverviewPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <Select
             value={exportPeriod}
-            onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "90" | "all" | "custom")}
+            onValueChange={(v) => setExportPeriod(v as "7" | "30" | "60" | "all" | "custom")}
           >
             <SelectTrigger className="w-36">
               <SelectValue />
@@ -431,7 +445,6 @@ export default function OverviewPage() {
               <SelectItem value="7">{t("admin_last_7_days")}</SelectItem>
               <SelectItem value="30">{t("admin_last_30_days")}</SelectItem>
               <SelectItem value="60">{t("admin_last_60_days")}</SelectItem>
-              <SelectItem value="90">{t("admin_last_90_days")}</SelectItem>
               <SelectItem value="all">{t("admin_all_time")}</SelectItem>
               <SelectItem value="custom">{t("admin_custom_range")}</SelectItem>
             </SelectContent>
@@ -573,6 +586,13 @@ export default function OverviewPage() {
               loading={summaryLoading}
             />
           </div>
+
+          {!summaryLoading && (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{t("recommendation_label")}:</span>{" "}
+              {recommendation.status} — {recommendation.advice}
+            </p>
+          )}
         </CardContent>
       </Card>
 

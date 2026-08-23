@@ -175,3 +175,40 @@ export function computeRiskScore(
     },
   };
 }
+
+// ─── Recommendation lookup ─────────────────────────────────────────────────
+// Combines Budget Utilization tier (<40% / 40–<80% / 80–100% / >100%) with
+// Risk level to pick one of 10 recommendation rows. Each row's i18n keys
+// live in lib/i18n.tsx as `rec_<key>_status` / `rec_<key>_advice`.
+export type RecommendationKey =
+  | "budget_low_risk_low"
+  | "budget_low_risk_medhigh"
+  | "budget_mid_risk_low"
+  | "budget_mid_risk_medium"
+  | "budget_mid_risk_highvhigh"
+  | "budget_near_risk_low"
+  | "budget_near_risk_medium"
+  | "budget_near_risk_highvhigh"
+  | "budget_over";
+
+export function getRecommendationKey(
+  budgetUtilization: number,
+  riskLevel: RiskScoreResult["level"]
+): RecommendationKey {
+  if (budgetUtilization > 100) return "budget_over";
+
+  if (budgetUtilization < 40) {
+    return riskLevel === "low" ? "budget_low_risk_low" : "budget_low_risk_medhigh";
+  }
+
+  if (budgetUtilization < 80) {
+    if (riskLevel === "low") return "budget_mid_risk_low";
+    if (riskLevel === "medium") return "budget_mid_risk_medium";
+    return "budget_mid_risk_highvhigh";
+  }
+
+  // 80–100%
+  if (riskLevel === "low") return "budget_near_risk_low";
+  if (riskLevel === "medium") return "budget_near_risk_medium";
+  return "budget_near_risk_highvhigh";
+}
