@@ -62,6 +62,17 @@ function formatCurrency(amount: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 }
 
+// ─── Timezone helper ──────────────────────────────────────────────────────────
+// new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
+// in browsers, causing a +7h shift. Using Date(y,m,d,h,min) always gives local
+// time, then .toISOString() sends a proper UTC timestamp to the server.
+function localToISO(dateStr: string): string {
+  const [datePart, timePart = "00:00"] = dateStr.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = (timePart || "00:00").split(":").map(Number);
+  return new Date(y, m - 1, d, h, min).toISOString();
+}
+
 function SummaryCard({
   title,
   amount,
@@ -399,7 +410,7 @@ export default function OverviewPage() {
         body: JSON.stringify({
           type: editForm.type,
           amount: parseFloat(editForm.amount),
-          date: editForm.date || undefined,
+          date: editForm.date ? localToISO(editForm.date) : undefined,
           description: editForm.description,
           category: editForm.type === "expense" ? editForm.category : undefined,
         }),

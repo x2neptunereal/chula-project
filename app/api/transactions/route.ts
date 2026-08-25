@@ -39,10 +39,19 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ transactions });
 }
 
+// A naive "yyyy-MM-dd HH:mm" string with no timezone offset is parsed by
+// `new Date()` using the *host's* local timezone — which happens to match
+// Thailand (UTC+7) on a local dev machine, but is UTC on Vercel, causing
+// saved times to shift by 7 hours in production. Explicitly assume Thailand
+// time for any string that doesn't already carry an offset ("Z" or
+// "+HH:mm"/"-HH:mm"), so parsing is identical regardless of where this runs.
 /** Accepts "yyyy-MM-dd", "yyyy-MM-dd HH:mm", or full ISO strings */
 function parseDate(s?: string): Date {
   if (!s) return new Date();
-  return new Date(s.replace(" ", "T"));
+  let iso = s.trim().replace(" ", "T");
+  if (!iso.includes("T")) iso += "T00:00:00";
+  const hasOffset = /Z$|[+-]\d{2}:\d{2}$/.test(iso);
+  return new Date(hasOffset ? iso : `${iso}+07:00`);
 }
 
 export async function POST(request: NextRequest) {

@@ -5,9 +5,18 @@ import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import Slip from "@/lib/models/Slip";
 import { getSession } from "@/lib/auth";
 
+// A naive "yyyy-MM-dd HH:mm" string with no timezone offset is parsed by
+// `new Date()` using the *host's* local timezone — which happens to match
+// Thailand (UTC+7) on a local dev machine, but is UTC on Vercel, causing
+// saved times to shift by 7 hours in production. Explicitly assume Thailand
+// time for any string that doesn't already carry an offset ("Z" or
+// "+HH:mm"/"-HH:mm"), so parsing is identical regardless of where this runs.
 function parseDate(s?: string): Date | undefined {
   if (!s) return undefined;
-  return new Date(s.replace(" ", "T"));
+  let iso = s.trim().replace(" ", "T");
+  if (!iso.includes("T")) iso += "T00:00:00";
+  const hasOffset = /Z$|[+-]\d{2}:\d{2}$/.test(iso);
+  return new Date(hasOffset ? iso : `${iso}+07:00`);
 }
 
 export async function PUT(
