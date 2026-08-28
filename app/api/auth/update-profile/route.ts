@@ -3,7 +3,6 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { getSession, signToken, setSessionCookie } from "@/lib/auth";
 
-/** PUT /api/auth/update-profile — change the signed-in user's display name (username). */
 export async function PUT(request: NextRequest) {
   const session = await getSession();
   if (!session) {
@@ -37,7 +36,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Re-issue the session token so the new username is reflected right away
     const token = await signToken({
       userId: user._id.toString(),
       email: user.email,

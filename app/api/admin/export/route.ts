@@ -39,11 +39,6 @@ const CATEGORY_TH: Record<string, string> = {
   social_gifts: "สังคมและของขวัญ",
 };
 
-/**
- * GET /api/admin/export?userId=...&period=7|30|custom
- * When period=custom, also requires startDate=yyyy-MM-dd&endDate=yyyy-MM-dd.
- * Admin only. Returns a plain .txt report.
- */
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!isAdmin(session)) {
@@ -80,7 +75,7 @@ export async function GET(request: NextRequest) {
     periodLabel = `Custom (${startParam} to ${endParam})`;
     fileTag = `custom_${startParam}_to_${endParam}`;
   } else {
-    const period = periodParam === "7" ? "7" : "30"; // only 7 or 30 allowed, default 30
+    const period = periodParam === "7" ? "7" : "30";
     startDate = periodToStartDate(period);
     endDate = new Date();
     periodLabel = `Last ${period} days`;
@@ -98,7 +93,7 @@ export async function GET(request: NextRequest) {
     userId,
     ...(startDate ? { date: { $gte: startDate, $lte: endDate } } : {}),
   })
-    .sort({ date: 1 }) // sort by time, oldest first
+    .sort({ date: 1 })
     .lean()) as unknown as ITransaction[];
 
   const incomeAmounts = transactions.filter((t) => t.type === "income").map((t) => t.amount);

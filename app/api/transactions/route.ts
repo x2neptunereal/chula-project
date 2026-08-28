@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   await connectDB();
 
   const { searchParams } = new URL(request.url);
-  const type = searchParams.get("type"); // "income" | "expense" | null
+  const type = searchParams.get("type");
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
 
@@ -39,13 +39,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ transactions });
 }
 
-// A naive "yyyy-MM-dd HH:mm" string with no timezone offset is parsed by
-// `new Date()` using the *host's* local timezone — which happens to match
-// Thailand (UTC+7) on a local dev machine, but is UTC on Vercel, causing
-// saved times to shift by 7 hours in production. Explicitly assume Thailand
-// time for any string that doesn't already carry an offset ("Z" or
-// "+HH:mm"/"-HH:mm"), so parsing is identical regardless of where this runs.
-/** Accepts "yyyy-MM-dd", "yyyy-MM-dd HH:mm", or full ISO strings */
 function parseDate(s?: string): Date {
   if (!s) return new Date();
   let iso = s.trim().replace(" ", "T");
@@ -76,9 +69,6 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Mongoose's enum validator rejects "" outright (only `undefined` counts as
-    // "unset"), so normalize a blank category before saving — otherwise income
-    // transactions, or expenses submitted without picking a category, fail.
     const normalizedCategory = category ? category : undefined;
 
     const transaction = await Transaction.create({
@@ -98,7 +88,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Bulk delete — body: { ids: string[] } */
 export async function DELETE(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -117,7 +106,6 @@ export async function DELETE(request: NextRequest) {
       userId: session.userId,
     });
 
-    // Also remove any linked slip records so those slips can be re-uploaded later
     await Slip.deleteMany({ transactionId: { $in: ids }, userId: session.userId });
 
     return NextResponse.json({ success: true, deletedCount: result.deletedCount });

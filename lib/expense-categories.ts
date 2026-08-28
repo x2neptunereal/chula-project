@@ -1,6 +1,3 @@
-// Shared constant — safe to import from both client components and server-only
-// model files (lib/models/Transaction.ts imports mongoose, which must never
-// end up in the browser bundle, so the category list lives here instead).
 export const EXPENSE_CATEGORIES = [
   "food_drinks",
   "travel",
@@ -14,7 +11,6 @@ export const EXPENSE_CATEGORIES = [
 
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
-// Maps each category to its i18n dictionary key (see lib/i18n.tsx).
 export const CATEGORY_LABEL_KEYS: Record<
   ExpenseCategory,
   | "category_food_drinks"

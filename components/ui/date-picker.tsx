@@ -10,23 +10,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useLanguage } from "@/lib/i18n";
 
 interface DatePickerProps {
-  /**
-   * Controlled value.
-   * Without showTime: "yyyy-MM-dd"
-   * With showTime:    "yyyy-MM-dd HH:mm"
-   */
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  /** Match the small height used in slip cards */
   size?: "default" | "sm";
   disabled?: boolean;
-  /** Also show an hour / minute picker below the calendar */
   showTime?: boolean;
 }
 
-/** Editable hour/minute box — click the chevrons or type a number directly. */
 function TimeField({
   value,
   max,
@@ -40,7 +32,6 @@ function TimeField({
 }) {
   const [text, setText] = React.useState(String(value).padStart(2, "0"));
 
-  // Keep the field in sync when the value changes elsewhere (chevrons, external prop change)
   React.useEffect(() => {
     setText(String(value).padStart(2, "0"));
   }, [value]);
@@ -100,7 +91,6 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
   const resolvedPlaceholder = placeholder ?? t("pick_a_date");
 
-  // ── Parse incoming value ────────────────────────────────────────────────────
   const { datePart, timePart } = React.useMemo(() => {
     if (!value) return { datePart: "", timePart: "00:00" };
     if (showTime && value.includes(" ")) {
@@ -118,7 +108,6 @@ export function DatePicker({
 
   const [hour, minute] = timePart.split(":").map(Number);
 
-  // ── Emit helper ─────────────────────────────────────────────────────────────
   function emit(day: Date | undefined, h: number, m: number) {
     if (!day) return;
     const dateStr = format(day, "yyyy-MM-dd");
@@ -134,7 +123,7 @@ export function DatePicker({
   function handleSelectDay(day: Date | undefined) {
     if (!day) return;
     emit(day, hour, minute);
-    if (!showTime) setOpen(false); // auto-close when no time picker
+    if (!showTime) setOpen(false);
   }
 
   function handleHour(delta: number) {
@@ -147,7 +136,6 @@ export function DatePicker({
     emit(selected, hour, next);
   }
 
-  // ── Display label ────────────────────────────────────────────────────────────
   const label = React.useMemo(() => {
     if (!selected) return null;
     const dateLabel = format(selected, "MM/dd/yyyy");
@@ -189,12 +177,10 @@ export function DatePicker({
           initialFocus
         />
 
-        {/* ── Time picker ─────────────────────────────────────────────────── */}
         {showTime && (
           <div className="border-t px-3 py-2.5 flex items-center gap-3">
             <IconClock className="size-4 text-muted-foreground shrink-0" />
 
-            {/* Hour */}
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -220,7 +206,6 @@ export function DatePicker({
 
             <span className="text-muted-foreground font-mono">:</span>
 
-            {/* Minute */}
             <div className="flex items-center gap-1">
               <button
                 type="button"

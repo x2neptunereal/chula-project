@@ -4,9 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type Lang = "en" | "th";
 
-// ─── Dictionary ──────────────────────────────────────────────────────────────
 const dict = {
-  // Brand / nav
   nav_overview: { en: "Overview", th: "ภาพรวม" },
   nav_expenses: { en: "Expenses", th: "รายจ่าย" },
   nav_income: { en: "Income", th: "รายรับ" },
@@ -16,7 +14,6 @@ const dict = {
   name_updated: { en: "Name updated", th: "เปลี่ยนชื่อสำเร็จ" },
   name_update_failed: { en: "Failed to update name", th: "เปลี่ยนชื่อไม่สำเร็จ" },
 
-  // Login page
   welcome_back: { en: "Welcome back", th: "ยินดีต้อนรับกลับ" },
   signin_subtitle: { en: "Sign in to your MONEX account", th: "เข้าสู่ระบบบัญชี MONEX ของคุณ" },
   email: { en: "Email", th: "อีเมล" },
@@ -25,7 +22,6 @@ const dict = {
   no_account: { en: "Don't have an account?", th: "ยังไม่มีบัญชี?" },
   sign_up: { en: "Sign up", th: "สมัครสมาชิก" },
 
-  // Signup page
   create_account_title: { en: "Create an account", th: "สร้างบัญชีใหม่" },
   create_account_subtitle: { en: "Start tracking your entropy today", th: "เริ่มติดตามการเงินของคุณวันนี้" },
   username: { en: "Username", th: "ชื่อผู้ใช้" },
@@ -37,7 +33,6 @@ const dict = {
   unable_to_connect: { en: "Unable to connect. Please try again.", th: "ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่" },
   something_went_wrong: { en: "Something went wrong", th: "เกิดข้อผิดพลาด" },
 
-  // Overview
   overview_title: { en: "Overview", th: "ภาพรวม" },
   overview_subtitle: { en: "Your financial summary", th: "สรุปข้อมูลการเงินของคุณ" },
   total_income: { en: "Total Income", th: "รายรับทั้งหมด" },
@@ -69,7 +64,6 @@ const dict = {
   tx_load_failed: { en: "Failed to load transactions", th: "โหลดรายการไม่สำเร็จ" },
   eg_grocery: { en: "e.g. Grocery shopping", th: "เช่น ค่าซื้อของใช้" },
 
-  // Expenses page
   record_expenses: { en: "Record Expenses", th: "บันทึกรายจ่าย" },
   record_expenses_subtitle: { en: "Enter manually or upload bank slips", th: "กรอกข้อมูลเองหรืออัปโหลดสลิปธนาคาร" },
   manual_entry: { en: "Manual Entry", th: "บันทึกด้วยตนเอง" },
@@ -125,7 +119,6 @@ const dict = {
   eg_payment_groceries: { en: "e.g. Payment for groceries", th: "เช่น ค่าซื้อของใช้" },
   slip: { en: "Slip", th: "สลิป" },
 
-  // Income page
   record_income: { en: "Record Income", th: "บันทึกรายรับ" },
   record_income_subtitle: { en: "Add income to your account", th: "เพิ่มรายรับให้กับบัญชีของคุณ" },
   new_income_entry: { en: "New Income Entry", th: "เพิ่มรายการรายรับใหม่" },
@@ -135,11 +128,9 @@ const dict = {
   income_recorded: { en: "Income recorded successfully", th: "บันทึกรายรับสำเร็จ" },
   income_save_failed: { en: "Failed to save income", th: "บันทึกรายรับไม่สำเร็จ" },
 
-  // Date picker
   pick_a_date: { en: "Pick a date", th: "เลือกวันที่" },
   done: { en: "Done", th: "เสร็จสิ้น" },
 
-  // Multi-select / bulk delete
   select: { en: "Select", th: "เลือก" },
   selected_count: { en: "selected", th: "ที่เลือก" },
   select_all: { en: "Select all", th: "เลือกทั้งหมด" },
@@ -153,7 +144,6 @@ const dict = {
   tx_bulk_deleted: { en: "Transactions deleted", th: "ลบรายการแล้ว" },
   tx_bulk_delete_failed: { en: "Failed to delete transactions", th: "ลบรายการไม่สำเร็จ" },
 
-  // Cash flow chart
   cash_flow: { en: "Cash Flow", th: "กระแสเงินสด" },
   cash_flow_subtitle: {
     en: "Income, expenses and balance over time",
@@ -165,7 +155,6 @@ const dict = {
   range_all: { en: "All", th: "ทั้งหมด" },
   no_chart_data: { en: "No data to display", th: "ไม่มีข้อมูลให้แสดง" },
 
-  // Admin page
   admin_title: { en: "Admin Panel", th: "แผงควบคุมผู้ดูแลระบบ" },
   admin_subtitle: {
     en: "View any user's dashboard and export their stats",
@@ -188,7 +177,6 @@ const dict = {
     th: "สัดส่วนรายจ่ายต่อรายรับในช่วงเวลาที่เลือก",
   },
 
-  // Risk score
   risk_score: { en: "Risk Score", th: "คะแนนความเสี่ยง" },
   risk_low: { en: "Low", th: "ต่ำ" },
   risk_medium: { en: "Medium", th: "ปานกลาง" },
@@ -216,7 +204,6 @@ const dict = {
   admin_category_concentration: { en: "Category Concentration", th: "ความเข้มข้นของหมวดหมู่" },
   admin_budget_utilization_risk: { en: "Budget Utilization & Risk Score", th: "อัตราการใช้จ่ายและคะแนนความเสี่ยง" },
 
-  // Recommendation lookup (Budget Utilization tier x Risk level)
   recommendation_label: { en: "Recommendation", th: "คำแนะนำ" },
   rec_budget_low_risk_low_status: { en: "Very good", th: "ดีมาก" },
   rec_budget_low_risk_low_advice: {
@@ -267,7 +254,6 @@ const dict = {
 
 export type DictKey = keyof typeof dict;
 
-// ─── Context ─────────────────────────────────────────────────────────────────
 interface LanguageContextValue {
   lang: Lang;
   toggleLang: () => void;

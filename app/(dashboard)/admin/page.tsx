@@ -129,7 +129,6 @@ export default function AdminPage() {
   const exportDisabled =
     exporting || (exportPeriod === "custom" && !customRangeValid);
 
-  // Admin gate
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
@@ -163,9 +162,6 @@ export default function AdminPage() {
     setSelectedUser(u);
   }, []);
 
-  // Re-fetch the selected user's transactions whenever the period selector
-  // (the same dropdown that drives the export) changes, so the displayed
-  // stats — including Budget Utilization & Risk Score — track the chosen range.
   useEffect(() => {
     if (!selectedUser) return;
     if (exportPeriod === "custom" && !customRangeValid) return;
@@ -203,7 +199,6 @@ export default function AdminPage() {
   const spendingRate =
     detailTotals.income > 0 ? (detailTotals.expenses / detailTotals.income) * 100 : 0;
 
-  // Risk Score for the selected user, over the selected period range.
   const riskScore = useMemo(() => {
     const today = new Date();
     let fromDate: Date;
@@ -427,7 +422,6 @@ export default function AdminPage() {
             />
           </div>
 
-          {/* Budget Utilization & Risk Score */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("admin_budget_utilization_risk")}</CardTitle>

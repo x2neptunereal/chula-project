@@ -62,10 +62,6 @@ function formatCurrency(amount: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
 }
 
-// ─── Timezone helper ──────────────────────────────────────────────────────────
-// new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
-// in browsers, causing a +7h shift. Using Date(y,m,d,h,min) always gives local
-// time, then .toISOString() sends a proper UTC timestamp to the server.
 function localToISO(dateStr: string): string {
   const [datePart, timePart = "00:00"] = dateStr.split(" ");
   const [y, m, d] = datePart.split("-").map(Number);
@@ -146,18 +142,15 @@ export default function OverviewPage() {
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
 
-  // Edit state
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [editForm, setEditForm] = useState<{ type: string; amount: string; date: string; description: string; category: ExpenseCategory | "" }>({ type: "expense", amount: "", date: "", description: "", category: "" });
   const [editLoading, setEditLoading] = useState(false);
 
-  // Multi-select state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
-  // Summary range state — drives the stat cards, the chart, and the export
   const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all" | "custom">("all");
   const [exportStart, setExportStart] = useState("");
   const [exportEnd, setExportEnd] = useState("");
@@ -166,7 +159,6 @@ export default function OverviewPage() {
   const exportRangeValid = !!exportStart && !!exportEnd && exportStart <= exportEnd;
   const exportDisabled = exporting || (exportPeriod === "custom" && !exportRangeValid);
 
-  // Resolve the summary range to concrete yyyy-MM-dd bounds
   const { summaryFrom, summaryTo } = useMemo(() => {
     const today = format(new Date(), "yyyy-MM-dd");
     if (exportPeriod === "custom") {
@@ -217,8 +209,6 @@ export default function OverviewPage() {
     );
   });
 
-  // For summary cards + chart: pull transactions scoped to the summary range
-  // (same range used by the Export control) separately from the list filters.
   const [summaryTransactions, setSummaryTransactions] = useState<Transaction[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
@@ -235,7 +225,7 @@ export default function OverviewPage() {
       })
       .catch(() => { })
       .finally(() => setSummaryLoading(false));
-  }, [summaryFrom, summaryTo, exportPeriod, exportRangeValid, transactions]); // refresh when list changes
+  }, [summaryFrom, summaryTo, exportPeriod, exportRangeValid, transactions]);
 
   const summaryTotals = {
     income: summaryTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
@@ -245,9 +235,6 @@ export default function OverviewPage() {
   const spendingRate =
     summaryTotals.income > 0 ? (summaryTotals.expenses / summaryTotals.income) * 100 : 0;
 
-  // Risk Score — same summary range as the stat cards / chart / export.
-  // "all time" has no explicit lower bound, so fall back to the earliest
-  // transaction in the set (or today, if there are none) as the range start.
   const riskScore = useMemo(() => {
     const toDate = summaryTo ? new Date(summaryTo) : new Date();
     let fromDate: Date;
@@ -485,7 +472,6 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
           title={t("total_income")}
@@ -511,7 +497,6 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Budget Utilization & Risk Score */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("admin_budget_utilization_risk")}</CardTitle>
@@ -607,14 +592,11 @@ export default function OverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Cash flow chart */}
       <CashFlowChart transactions={summaryTransactions} from={summaryFrom} to={summaryTo} />
 
-      {/* Transaction list */}
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3">
-            {/* Title row */}
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">{t("transactions")}</CardTitle>
               <div className="flex items-center gap-1">
@@ -636,7 +618,6 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            {/* Bulk selection bar */}
             {selectMode && (
               <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2">
                 <div className="flex items-center gap-2">
@@ -666,7 +647,6 @@ export default function OverviewPage() {
               </div>
             )}
 
-            {/* Search */}
             <div className="relative">
               <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
               <Input
@@ -677,7 +657,6 @@ export default function OverviewPage() {
               />
             </div>
 
-            {/* Type + date filters */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <div className="col-span-2 sm:col-span-1">
                 <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
@@ -724,7 +703,6 @@ export default function OverviewPage() {
                     }`}
                   onClick={() => selectMode && toggleSelected(tx._id)}
                 >
-                  {/* Checkbox (select mode only) */}
                   {selectMode && (
                     <Checkbox
                       checked={selectedIds.has(tx._id)}
@@ -734,7 +712,6 @@ export default function OverviewPage() {
                     />
                   )}
 
-                  {/* Type indicator */}
                   <div
                     className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${tx.type === "income"
                         ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
@@ -769,9 +746,7 @@ export default function OverviewPage() {
                     )}
                   </div>
 
-                  {/* Info — takes all remaining space */}
                   <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-                    {/* Row 1: description + amount */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium truncate">
                         {tx.description || (tx.type === "income" ? t("income") : t("expense"))}
@@ -783,7 +758,6 @@ export default function OverviewPage() {
                         {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
                       </span>
                     </div>
-                    {/* Row 2: date + badge + actions */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground flex items-center gap-1 flex-1 whitespace-nowrap">
                         <IconCalendar className="size-3 shrink-0" />
@@ -811,7 +785,6 @@ export default function OverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
       <Dialog open={!!editTx} onOpenChange={(open) => !open && setEditTx(null)}>
         <DialogContent>
           <DialogHeader>
@@ -901,7 +874,6 @@ export default function OverviewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm bulk delete dialog */}
       <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && setBulkDeleteOpen(false)}>
         <DialogContent>
           <DialogHeader>

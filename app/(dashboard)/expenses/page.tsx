@@ -25,10 +25,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/lib/i18n";
 import { EXPENSE_CATEGORIES, CATEGORY_LABEL_KEYS, type ExpenseCategory } from "@/lib/expense-categories";
 
-// ─── Timezone helper ──────────────────────────────────────────────────────────
-// new Date("yyyy-MM-dd HH:mm") is parsed as UTC on Node.js (Vercel) but local
-// in browsers, causing a +7h shift. Using Date(y,m,d,h,min) always gives local
-// time, then .toISOString() sends a proper UTC timestamp to the server.
 function localToISO(dateStr: string): string {
   const [datePart, timePart = "00:00"] = dateStr.split(" ");
   const [y, m, d] = datePart.split("-").map(Number);
@@ -36,7 +32,6 @@ function localToISO(dateStr: string): string {
   return new Date(y, m - 1, d, h, min).toISOString();
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const BANK_LABELS: Record<BankType, string> = {
   krungthai: "Krungthai",
   truemoney: "TrueMoney",
@@ -44,7 +39,6 @@ const BANK_LABELS: Record<BankType, string> = {
   unknown: "Unknown",
 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface SlipEntry {
   id: string;
   file: File;
@@ -52,7 +46,6 @@ interface SlipEntry {
   status: "pending" | "scanning" | "done" | "duplicate" | "error";
   parsed: ParsedSlip | null;
   rawText?: string;
-  // editable fields
   amount: string;
   date: string;
   description: string;
@@ -62,7 +55,6 @@ interface SlipEntry {
   errorMsg?: string;
 }
 
-// ─── OpenCV + Tesseract loaders ──────────────────────────────────────────────
 let cvReady = false;
 async function loadOpenCV(): Promise<void> {
   if (cvReady || typeof window === "undefined") return;
@@ -72,7 +64,7 @@ async function loadOpenCV(): Promise<void> {
     script.src = "https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js";
     script.async = true;
     script.onload = () => { cvReady = true; resolve(); };
-    script.onerror = () => resolve(); // fail silently, OCR still works without it
+    script.onerror = () => resolve();
     document.body.appendChild(script);
   });
 }
@@ -81,10 +73,6 @@ async function loadOpenCV(): Promise<void> {
 type CV = any;
 
 async function preprocessImage(imgEl: HTMLImageElement): Promise<HTMLCanvasElement> {
-  // Scale up 2× — Tesseract accuracy improves significantly at higher resolution.
-  // Bank slip backgrounds (TrueMoney waves, Krungthai watermarks) are destroyed by
-  // aggressive binary thresholding, so we only convert to grayscale and let Tesseract
-  // handle the rest with its own internal thresholding.
   const scale = 2;
   const canvas = document.createElement("canvas");
   canvas.width = imgEl.naturalWidth * scale;
@@ -94,7 +82,6 @@ async function preprocessImage(imgEl: HTMLImageElement): Promise<HTMLCanvasEleme
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
 
-  // Grayscale only — no harsh thresholding
   const cv: CV = (window as Window & { cv?: CV }).cv;
   if (cv) {
     try {
@@ -106,11 +93,9 @@ async function preprocessImage(imgEl: HTMLImageElement): Promise<HTMLCanvasEleme
       gray.delete();
       return canvas;
     } catch {
-      // fall through to manual grayscale
     }
   }
 
-  // Fallback: manual grayscale via Canvas API
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
   for (let i = 0; i < data.length; i += 4) {
@@ -129,10 +114,8 @@ async function runOCR(canvas: HTMLCanvasElement): Promise<string> {
   return text;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
 export default function ExpensesPage() {
   const { t } = useLanguage();
-  // Manual entry
   const [manualAmount, setManualAmount] = useState("");
   const [manualDate, setManualDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm"));
   const [manualDesc, setManualDesc] = useState("");
@@ -140,12 +123,10 @@ export default function ExpensesPage() {
   const [manualLoading, setManualLoading] = useState(false);
   const [manualSaved, setManualSaved] = useState(false);
 
-  // Slip upload
   const [slips, setSlips] = useState<SlipEntry[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Manual submit ──────────────────────────────────────────────────────────
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsed = parseFloat(manualAmount);
@@ -184,7 +165,6 @@ export default function ExpensesPage() {
     }
   }
 
-  // ── Slip file handling ─────────────────────────────────────────────────────
   function addFiles(files: FileList | File[]) {
     const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
     if (!arr.length) { toast.error(t("upload_images_only")); return; }
@@ -225,14 +205,12 @@ export default function ExpensesPage() {
     setSlips((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
 
-  // ── OCR + parse a single slip ──────────────────────────────────────────────
   const scanSlip = useCallback(async (slip: SlipEntry) => {
     updateSlip(slip.id, { status: "scanning" });
 
     try {
-      await loadOpenCV(); // optional — used only for grayscale conversion; canvas fallback is fine too
+      await loadOpenCV();
 
-      // Load image
       const img = new Image();
       img.src = slip.preview;
       await new Promise<void>((res, rej) => {
@@ -242,10 +220,9 @@ export default function ExpensesPage() {
 
       const canvas = await preprocessImage(img);
       const text = await runOCR(canvas);
-      console.log("[OCR raw text]", text); // debug: see what Tesseract extracted
+      console.log("[OCR raw text]", text);
       const parsed = parseSlipText(text);
 
-      // Duplicate check
       if (parsed.transactionNumber) {
         const checkRes = await fetch("/api/slips/check", {
           method: "POST",
@@ -271,7 +248,6 @@ export default function ExpensesPage() {
         rawText: text,
         transactionNumber: parsed.transactionNumber ?? "",
         amount: parsed.amount ? String(parsed.amount) : "",
-        // Use full date+time from OCR; fall back to current datetime only if nothing was parsed
         date: format(parsed.date ?? new Date(), "yyyy-MM-dd HH:mm"),
         bank: parsed.bank,
         description: `${t("slip")} (${BANK_LABELS[parsed.bank]})`,
@@ -293,7 +269,6 @@ export default function ExpensesPage() {
     toast.success(`${t("scanned_slips")} ${pending.length} ${t("slip_s")}`);
   }
 
-  // ── Save confirmed slips ───────────────────────────────────────────────────
   async function saveSlips() {
     const ready = slips.filter((s) => s.status === "done");
     if (!ready.length) { toast.info(t("no_confirmed_slips")); return; }
@@ -343,7 +318,6 @@ export default function ExpensesPage() {
         <p className="text-sm text-muted-foreground mt-0.5">{t("record_expenses_subtitle")}</p>
       </div>
 
-      {/* ── Manual entry ──────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -434,7 +408,6 @@ export default function ExpensesPage() {
 
       <Separator />
 
-      {/* ── Slip upload ────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -451,7 +424,6 @@ export default function ExpensesPage() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
-          {/* Drop zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
@@ -480,7 +452,6 @@ export default function ExpensesPage() {
             />
           </div>
 
-          {/* Slip list */}
           {slips.length > 0 && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -518,7 +489,6 @@ export default function ExpensesPage() {
   );
 }
 
-// ─── SlipCard ─────────────────────────────────────────────────────────────────
 function SlipCard({
   slip,
   onRemove,
@@ -550,7 +520,6 @@ function SlipCard({
 
   return (
     <div className="rounded-2xl border bg-card p-4 flex flex-col gap-3">
-      {/* ── Lightbox overlay ── */}
       {lightboxOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
@@ -567,7 +536,6 @@ function SlipCard({
       )}
 
       <div className="flex items-start gap-3">
-        {/* Thumbnail — click to enlarge */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={slip.preview}
@@ -608,7 +576,6 @@ function SlipCard({
         </Button>
       </div>
 
-      {/* Duplicate / error notice */}
       {(slip.status === "duplicate" || slip.status === "error") && (
         <div className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${
           slip.status === "duplicate"
@@ -627,7 +594,7 @@ function SlipCard({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ transactionNumber: slip.transactionNumber }),
                 });
-                onScan(); // re-scan now that the record is cleared
+                onScan();
               }}
             >
               {t("clear_retry")}
@@ -636,7 +603,6 @@ function SlipCard({
         </div>
       )}
 
-      {/* Editable fields when OCR is done */}
       {slip.status === "done" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t">
           <div className="flex flex-col gap-1">
@@ -708,7 +674,6 @@ function SlipCard({
             </Select>
           </div>
 
-          {/* Raw OCR text — for debugging empty results */}
           {slip.rawText !== undefined && (
             <div className="sm:col-span-2 flex flex-col gap-1">
               <button

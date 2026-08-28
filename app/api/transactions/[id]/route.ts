@@ -5,12 +5,6 @@ import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import Slip from "@/lib/models/Slip";
 import { getSession } from "@/lib/auth";
 
-// A naive "yyyy-MM-dd HH:mm" string with no timezone offset is parsed by
-// `new Date()` using the *host's* local timezone — which happens to match
-// Thailand (UTC+7) on a local dev machine, but is UTC on Vercel, causing
-// saved times to shift by 7 hours in production. Explicitly assume Thailand
-// time for any string that doesn't already carry an offset ("Z" or
-// "+HH:mm"/"-HH:mm"), so parsing is identical regardless of where this runs.
 function parseDate(s?: string): Date | undefined {
   if (!s) return undefined;
   let iso = s.trim().replace(" ", "T");
@@ -40,10 +34,6 @@ export async function PUT(
 
     await connectDB();
 
-    // Mongoose's enum validator rejects "" outright (it only treats `undefined`
-    // as "unset"), so normalize any falsy/blank category to undefined here —
-    // otherwise editing an income transaction, or an expense whose category
-    // wasn't (re)selected, fails validation and the update 500s.
     const normalizedCategory = category ? category : undefined;
 
     const transaction = await Transaction.findOneAndUpdate(
@@ -85,7 +75,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
-    // Also remove the linked slip record so the same slip can be re-uploaded later
     await Slip.deleteOne({ transactionId: transaction._id, userId: session.userId });
 
     return NextResponse.json({ success: true });

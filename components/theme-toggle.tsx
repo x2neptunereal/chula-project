@@ -11,7 +11,6 @@ export function ThemeToggle() {
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("theme");
-    // Default is dark unless user explicitly chose light
     const dark = stored !== "light";
     setIsDark(dark);
     document.documentElement.classList.toggle("dark", dark);
@@ -24,7 +23,6 @@ export function ThemeToggle() {
     document.documentElement.classList.toggle("dark", next);
   }
 
-  // Avoid hydration mismatch — render a placeholder until mounted
   if (!mounted) return <div className="size-8" />;
 
   return (

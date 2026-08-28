@@ -1,27 +1,3 @@
-// Risk Score — a 0–100 composite indicator of risky spending behavior over a
-// date range, built from 5 weighted sub-metrics. Each sub-metric contributes
-// a capped number of points; the sum is the Risk Score.
-//
-//   Point 1 (max 50): Budget Utilization  = (Expenses ÷ Income) × 100
-//                      Point 1 = min(50, (Budget Utilization / 120) × 50)
-//
-//   Point 2 (max 15): Expense per Day     = Total Expense ÷ Days in range
-//                      Median Expense/Day = median of each day's expense total
-//                                           within the range (days with no
-//                                           expenses count as 0)
-//                      Point 2 = min(15, (Expense per Day / (2 × Median Expense per Day)) × 15)
-//
-//   Point 3 (max 15): Transaction Frequency = Number of Expense Items ÷ Days in range
-//                      Point 3 = min(15, (Transaction Frequency / 2.5) × 15)
-//
-//   Point 4 (max 10): Largest Transaction Ratio = (largest single expense ÷ Total Expense) × 100
-//                      Point 4 = min(10, (Largest Transaction Ratio / 70) × 10)
-//
-//   Point 5 (max 10): Category Concentration = (highest-total category's sum ÷ Total Expense) × 100
-//                      Point 5 = min(10, (Category Concentration / 80) × 10)
-//
-// Risk Score = Point 1 + Point 2 + Point 3 + Point 4 + Point 5 (0–100, each
-// point capped at its max so the total can never exceed 100).
 
 export interface RiskTransaction {
   type: "income" | "expense";
@@ -41,12 +17,12 @@ export interface RiskScoreResult {
     categoryConcentration: number;
   };
   metrics: {
-    budgetUtilization: number; // %
-    expensePerDay: number; // THB/day
-    medianExpensePerDay: number; // THB/day
-    transactionFrequency: number; // items/day
-    largestTransactionRatio: number; // %
-    categoryConcentration: number; // %
+    budgetUtilization: number;
+    expensePerDay: number;
+    medianExpensePerDay: number;
+    transactionFrequency: number;
+    largestTransactionRatio: number;
+    categoryConcentration: number;
     days: number;
     totalIncome: number;
     totalExpense: number;
@@ -67,14 +43,6 @@ function median(values: number[]): number {
     : sorted[mid];
 }
 
-/**
- * Computes the Risk Score for a set of transactions over an explicit date
- * range. `from`/`to` are inclusive calendar-day bounds (local Date objects
- * with time truncated is fine — only the day is used). Pass the same
- * transactions/range used for the period's other stats (e.g. summaryFrom /
- * summaryTo on Overview, or the admin export range) so all three stay
- * consistent.
- */
 export function computeRiskScore(
   transactions: RiskTransaction[],
   from: Date,
@@ -97,11 +65,9 @@ export function computeRiskScore(
   const totalExpense = expenses.reduce((s, t) => s + t.amount, 0);
   const expenseCount = expenses.length;
 
-  // ── Point 1: Budget Utilization ──────────────────────────────────────────
   const budgetUtilization = totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
   const point1 = Math.min(50, (budgetUtilization / 120) * 50);
 
-  // ── Point 2: Expense per Day vs. Median Expense per Day ─────────────────
   const expensePerDay = totalExpense / days;
 
   const dailyExpenseMap = new Map<string, number>();
@@ -109,7 +75,6 @@ export function computeRiskScore(
     const key = dayKey(new Date(tx.date));
     dailyExpenseMap.set(key, (dailyExpenseMap.get(key) ?? 0) + tx.amount);
   }
-  // Zero-expense days within the range count as 0 toward the median.
   const dailyTotals: number[] = [];
   for (let i = 0; i < days; i++) {
     const d = new Date(fromDay);
@@ -121,19 +86,16 @@ export function computeRiskScore(
     medianExpensePerDay > 0
       ? Math.min(15, (expensePerDay / (2 * medianExpensePerDay)) * 15)
       : expensePerDay > 0
-        ? 15 // any spending against a zero median is maximally anomalous
+        ? 15
         : 0;
 
-  // ── Point 3: Transaction Frequency ───────────────────────────────────────
   const transactionFrequency = expenseCount / days;
   const point3 = Math.min(15, (transactionFrequency / 2.5) * 15);
 
-  // ── Point 4: Largest Transaction Ratio ───────────────────────────────────
   const largestExpense = expenses.reduce((m, t) => Math.max(m, t.amount), 0);
   const largestTransactionRatio = totalExpense > 0 ? (largestExpense / totalExpense) * 100 : 0;
   const point4 = Math.min(10, (largestTransactionRatio / 70) * 10);
 
-  // ── Point 5: Category Concentration ──────────────────────────────────────
   const categoryTotals = new Map<string, number>();
   for (const tx of expenses) {
     const key = tx.category ?? "uncategorized";
@@ -176,10 +138,6 @@ export function computeRiskScore(
   };
 }
 
-// ─── Recommendation lookup ─────────────────────────────────────────────────
-// Combines Budget Utilization tier (<40% / 40–<80% / 80–100% / >100%) with
-// Risk level to pick one of 10 recommendation rows. Each row's i18n keys
-// live in lib/i18n.tsx as `rec_<key>_status` / `rec_<key>_advice`.
 export type RecommendationKey =
   | "budget_low_risk_low"
   | "budget_low_risk_medhigh"
@@ -207,7 +165,6 @@ export function getRecommendationKey(
     return "budget_mid_risk_highvhigh";
   }
 
-  // 80–100%
   if (riskLevel === "low") return "budget_near_risk_low";
   if (riskLevel === "medium") return "budget_near_risk_medium";
   return "budget_near_risk_highvhigh";

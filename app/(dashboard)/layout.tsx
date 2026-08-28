@@ -67,7 +67,6 @@ function NavContent({ user }: { user: User | null }) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5">
         <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <IconChessKnightFilled className="size-4" />
@@ -77,7 +76,6 @@ function NavContent({ user }: { user: User | null }) {
 
       <Separator />
 
-      {/* Nav links */}
       <nav className="flex flex-col gap-1 p-2 flex-1 mt-2">
         {items.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
@@ -146,7 +144,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null);
   const [particleColor, setParticleColor] = useState("#71717a");
 
-  // Change name dialog
   const [renameOpen, setRenameOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [renameLoading, setRenameLoading] = useState(false);
@@ -158,7 +155,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {});
   }, []);
 
-  // Sync particle color with dark/light mode
   useEffect(() => {
     const update = () => {
       const isDark = document.documentElement.classList.contains("dark");
@@ -214,14 +210,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         color={particleColor}
       />
 
-      {/* Desktop sidebar */}
       <aside className="relative z-10 hidden md:flex w-60 flex-col border-r bg-card shrink-0">
         <NavContent user={user} />
       </aside>
 
-      {/* Main content area */}
       <div className="relative z-10 flex flex-1 flex-col min-w-0">
-        {/* Top header */}
         <header className="flex items-center gap-3 border-b px-4 py-3 bg-card">
           <div className="flex items-center gap-2 md:hidden">
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -272,11 +265,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
 
-        {/* Mobile bottom nav */}
         <MobileBottomNav user={user} />
       </div>
 
-      {/* Change name dialog */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent>
           <DialogHeader>

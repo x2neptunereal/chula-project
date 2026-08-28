@@ -44,7 +44,6 @@ const SlipSchema = new Schema<ISlip>(
   { timestamps: true }
 );
 
-// Unique per user + transaction number
 SlipSchema.index({ userId: 1, transactionNumber: 1 }, { unique: true });
 
 const Slip: Model<ISlip> =

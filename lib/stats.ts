@@ -18,7 +18,6 @@ const EMPTY_BLOCK: StatBlock = {
   count: 0,
 };
 
-/** Computes total/average/median/mode/max/min over a list of amounts. */
 export function computeStatBlock(amounts: number[]): StatBlock {
   if (amounts.length === 0) return { ...EMPTY_BLOCK };
 

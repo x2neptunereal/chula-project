@@ -27,7 +27,6 @@ function buildSeries(transactions: Transaction[], from?: string, to?: string) {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  // Daily totals
   const daily: Record<string, { income: number; expense: number }> = {};
   for (const tx of sorted) {
     const key = format(parseISO(tx.date), "yyyy-MM-dd");
@@ -68,7 +67,6 @@ export function CashFlowChart({
   to,
 }: {
   transactions: Transaction[];
-  /** yyyy-MM-dd. When omitted, the series starts at the earliest transaction / ends today. */
   from?: string;
   to?: string;
 }) {
@@ -95,7 +93,6 @@ export function CashFlowChart({
           <p className="text-xs text-muted-foreground mt-0.5">{t("cash_flow_subtitle")}</p>
         </div>
 
-        {/* Series toggles */}
         <div className="flex items-center gap-3 pt-1">
           <button
             type="button"

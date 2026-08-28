@@ -129,7 +129,6 @@
   }
 }
 
-/* Thai language mode — swap the sans font to LINE Seed Sans TH everywhere */
 html.lang-th {
   --font-sans: var(--font-th);
 }

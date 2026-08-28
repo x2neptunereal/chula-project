@@ -6,7 +6,6 @@ import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { periodToStartDate } from "@/lib/stats";
 
-/** GET /api/admin/user-detail?userId=...&period=7|30|60|all — admin only. */
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!isAdmin(session)) {

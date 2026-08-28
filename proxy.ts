@@ -10,12 +10,10 @@ const PUBLIC_PATHS = ["/login", "/signup", "/api/auth/login", "/api/auth/signup"
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Allow static files and Next internals
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||

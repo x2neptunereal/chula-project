@@ -144,7 +144,6 @@ export function Particles({
 
       drawCircle(circle, true);
 
-      // respawn off-screen particles
       if (
         circle.x < -circle.size ||
         circle.x > w + circle.size ||
@@ -186,7 +185,6 @@ export function Particles({
     };
   }, []);
 
-  // Redraw when color changes (theme switch)
   useEffect(() => {
     drawParticles();
   }, [color]);

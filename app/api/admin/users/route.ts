@@ -5,7 +5,6 @@ import User from "@/lib/models/User";
 import { getSession } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 
-/** GET /api/admin/users — list every user with aggregate income/expense stats. Admin only. */
 export async function GET() {
   const session = await getSession();
   if (!isAdmin(session)) {
