@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { useLanguage } from "@/lib/i18n";
 import { isAdminEmail } from "@/lib/admin";
-import { computeRiskScore } from "@/lib/risk-score";
+import { computeRiskScore, getRecommendationKey, type RecommendationKey } from "@/lib/risk-score";
 
 interface UserSummary {
   id: string;
@@ -249,6 +249,20 @@ export default function AdminPage() {
     high: t("risk_desc_high"),
     very_high: t("risk_desc_very_high"),
   };
+
+  const recommendationCopy: Record<RecommendationKey, { status: string; advice: string }> = {
+    budget_low_risk_low: { status: t("rec_budget_low_risk_low_status"), advice: t("rec_budget_low_risk_low_advice") },
+    budget_low_risk_medhigh: { status: t("rec_budget_low_risk_medhigh_status"), advice: t("rec_budget_low_risk_medhigh_advice") },
+    budget_mid_risk_low: { status: t("rec_budget_mid_risk_low_status"), advice: t("rec_budget_mid_risk_low_advice") },
+    budget_mid_risk_medium: { status: t("rec_budget_mid_risk_medium_status"), advice: t("rec_budget_mid_risk_medium_advice") },
+    budget_mid_risk_highvhigh: { status: t("rec_budget_mid_risk_highvhigh_status"), advice: t("rec_budget_mid_risk_highvhigh_advice") },
+    budget_near_risk_low: { status: t("rec_budget_near_risk_low_status"), advice: t("rec_budget_near_risk_low_advice") },
+    budget_near_risk_medium: { status: t("rec_budget_near_risk_medium_status"), advice: t("rec_budget_near_risk_medium_advice") },
+    budget_near_risk_highvhigh: { status: t("rec_budget_near_risk_highvhigh_status"), advice: t("rec_budget_near_risk_highvhigh_advice") },
+    budget_over: { status: t("rec_budget_over_status"), advice: t("rec_budget_over_advice") },
+  };
+  const recommendationKey = getRecommendationKey(riskScore.metrics.budgetUtilization, riskScore.level);
+  const recommendation = recommendationCopy[recommendationKey];
 
   async function handleExport() {
     if (!selectedUser) return;
@@ -505,6 +519,13 @@ export default function AdminPage() {
                   loading={detailLoading}
                 />
               </div>
+
+              {!detailLoading && (
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{t("recommendation_label")}:</span>{" "}
+                  {recommendation.status} — {recommendation.advice}
+                </p>
+              )}
             </CardContent>
           </Card>
 
