@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { CashFlowChart } from "@/components/cash-flow-chart";
 import { useLanguage } from "@/lib/i18n";
 import { isAdminEmail } from "@/lib/admin";
 import { computeRiskScore, getRecommendationKey, type RecommendationKey } from "@/lib/risk-score";
@@ -47,6 +48,13 @@ interface Transaction {
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount);
+}
+
+function toDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function StatPill({
@@ -199,7 +207,7 @@ export default function AdminPage() {
   const spendingRate =
     detailTotals.income > 0 ? (detailTotals.expenses / detailTotals.income) * 100 : 0;
 
-  const riskScore = useMemo(() => {
+  const detailRange = useMemo(() => {
     const today = new Date();
     let fromDate: Date;
     let toDate: Date;
@@ -222,8 +230,16 @@ export default function AdminPage() {
       fromDate = new Date(today);
       fromDate.setDate(fromDate.getDate() - days);
     }
-    return computeRiskScore(detailTransactions, fromDate, toDate);
+    return { fromDate, toDate };
   }, [detailTransactions, exportPeriod, customStart, customEnd, customRangeValid]);
+
+  const detailFrom = toDateStr(detailRange.fromDate);
+  const detailTo = toDateStr(detailRange.toDate);
+
+  const riskScore = useMemo(
+    () => computeRiskScore(detailTransactions, detailRange.fromDate, detailRange.toDate),
+    [detailTransactions, detailRange]
+  );
 
   const riskLevelLabel: Record<typeof riskScore.level, string> = {
     low: t("risk_low"),
@@ -528,6 +544,8 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+
+          <CashFlowChart transactions={detailTransactions} from={detailFrom} to={detailTo} />
 
           <Card>
             <CardHeader>
